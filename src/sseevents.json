@@ -1,0 +1,3 @@
+{
+    "SSEEvents":["/researcher","/researcher/study","/study/activity","/study/participant","/study/sensor","/participant/activity_event","/participant/sensor_event"]
+}
