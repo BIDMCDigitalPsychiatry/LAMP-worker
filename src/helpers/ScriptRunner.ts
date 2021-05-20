@@ -69,12 +69,12 @@ export abstract class ScriptRunner {
         const output = (await getFileInTar(await container.getArchive({ path: "/usr/stdout" }), "stdout")).toString(
           "utf8"
         ) as any
-        
+
         if (!!output) console.log(`output retrieved from script - ${output} `)
         console.log(`Script execution finished.`)
       } catch (e) {
         console.error(e)
-      } finally {        
+      } finally {
         await container.stop()
         await container.remove({ force: true })
         console.log("Stopped the container")
@@ -154,7 +154,7 @@ export abstract class ScriptRunner {
         console.log(`Script execution finished.`)
       } catch (error) {
         console.error(error)
-      } finally {        
+      } finally {
         await container.stop()
         await container.remove({ force: true })
         console.log("Stopped the container")
