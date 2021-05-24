@@ -149,15 +149,15 @@ main()
           x.subscribe(topic, async (err, msg) => {
             const data = msg.data
             updateSchedule(topic, data.data)
+             //create folder uploads if not exists
+            if (!fs.existsSync(UploadPath)) {
+              fs.mkdirSync(UploadPath, {
+                recursive: true,
+              })
+            }
             const related_tokens = await getRelatedTokens(data.token)
-            const researchers: any[] = await LAMP.Researcher.all()
-            for (const researcher of researchers) {
-              //create folder uploads if not exists
-              if (!fs.existsSync(UploadPath)) {
-                fs.mkdirSync(UploadPath, {
-                  recursive: true,
-                })
-              }              
+            const researchers: any[] = await LAMP.Researcher.all()            
+            for (const researcher of researchers) {                           
               //fetch researchers from LAMP
               for (const related_token of related_tokens) {
                 const release = await clientLock.acquire()
