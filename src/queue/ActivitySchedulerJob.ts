@@ -129,16 +129,18 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             // updating ShedulerReference Queue(if already activity_id exists as JobId)
             const SchedulerReferenceJob = (await SchedulerReferenceQueue?.getJob(activity.id)) || null
             if (null !== SchedulerReferenceJob) {
-              const SchedulerReferenceIds: any = SchedulerReferenceJob?.data.scheduler_ref_ids || []
-              const existSchedulerId = await SchedulerReferenceIds.filter((referenceId: any) =>
-                referenceId.includes(SchedulerjobResponse.id)
-              )
-              if (existSchedulerId.length === 0 && undefined === existSchedulerId[0]) {
-                await SchedulerReferenceIds.push(SchedulerjobResponse.id)
-                await SchedulerReferenceJob?.update({
-                  scheduler_ref_ids: SchedulerReferenceIds,
-                  activity_id: activity.id,
-                })
+              if (!!SchedulerjobResponse.id) {
+                const SchedulerReferenceIds: any = SchedulerReferenceJob?.data.scheduler_ref_ids || []
+                const existSchedulerId = await SchedulerReferenceIds.filter((referenceId: any) =>
+                  referenceId.includes(SchedulerjobResponse.id)
+                )
+                if (existSchedulerId.length === 0 && undefined === existSchedulerId[0]) {
+                  await SchedulerReferenceIds.push(SchedulerjobResponse.id)
+                  await SchedulerReferenceJob?.update({
+                    scheduler_ref_ids: SchedulerReferenceIds,
+                    activity_id: activity.id,
+                  })
+                }
               }
             } else {
               //add to scheduler reference queue(as we cannot make custom id for repeatable job, we need a reference of schedular jobids)
@@ -197,7 +199,7 @@ export const NotificationScheduling = async (): Promise<void> => {
           ActivityScheduler(activity.id, study.id, [activity] as any)
         }
       }
-    }    
+    }
   }
 }
 /**get the cron string
@@ -321,17 +323,19 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
 
           //updating ShedulerReference Queue, if the activity is not saved (make activity.id as job id)
           if (null !== SchedulerReferenceJob) {
-            const SchedulerReferenceIds: any = SchedulerReferenceJob?.data.scheduler_ref_ids
-            const existSchedulerId = await SchedulerReferenceIds.filter((referenceId: any) =>
-              referenceId.includes(SchedulerjobResponse?.id)
-            )
+            if (!!SchedulerjobResponse.id) {
+              const SchedulerReferenceIds: any = SchedulerReferenceJob?.data.scheduler_ref_ids
+              const existSchedulerId = await SchedulerReferenceIds.filter((referenceId: any) =>
+                referenceId.includes(SchedulerjobResponse?.id)
+              )
 
-            if (existSchedulerId.length === 0 && undefined === existSchedulerId[0]) {
-              await SchedulerReferenceIds.push(SchedulerjobResponse?.id)
-              await SchedulerReferenceJob?.update({
-                scheduler_ref_ids: SchedulerReferenceIds,
-                activity_id: activity.activity_id,
-              })
+              if (existSchedulerId.length === 0 && undefined === existSchedulerId[0]) {
+                await SchedulerReferenceIds.push(SchedulerjobResponse?.id)
+                await SchedulerReferenceJob?.update({
+                  scheduler_ref_ids: SchedulerReferenceIds,
+                  activity_id: activity.activity_id,
+                })
+              }
             }
           } else {
             //add to scheduler reference queue(as we cannot make custom id for repeatable job, we need a reference of schedular jobids)
