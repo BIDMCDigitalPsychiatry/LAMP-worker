@@ -312,7 +312,7 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
         }
         //add to schedular queue
         try {
-          const SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
+          const SchedulerjobResponse: any = await SchedulerQueue?.add(scheduler_payload, {
             removeOnComplete: true,
             removeOnFail: true,
             backoff: 10000,
