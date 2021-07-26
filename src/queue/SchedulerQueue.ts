@@ -13,20 +13,22 @@ export async function SchedulerQueueProcess(job: Bull.Job<any>, done: Bull.DoneC
   const data: any = job.data
   try {
     //removing duplicate device token (if any)
-    const uniqueParticipants = await removeDuplicateParticipants(data.participants)
-    for (const device of uniqueParticipants) {
-      const device_type = device.device_type
-      const device_token = device.device_token
-      const participant_id = device.participant_id
-      if (undefined !== device_token && undefined !== device_type && undefined !== participant_id) {
-        sendNotification(device_token, device_type, {
-          participant_id: participant_id,
-          activity_id: data.activity_id,
-          message: data.message,
-          title: data.title,
-          url: `/participant/${participant_id}/activity/${data.activity_id}`,
-          notificationId: !!data.notificationIds ? data.notificationIds : undefined,
-        })
+    if (job.data.start_date === undefined || new Date() >= job.data.start_date) {
+      const uniqueParticipants = await removeDuplicateParticipants(data.participants)
+      for (const device of uniqueParticipants) {
+        const device_type = device.device_type
+        const device_token = device.device_token
+        const participant_id = device.participant_id
+        if (undefined !== device_token && undefined !== device_type && undefined !== participant_id) {
+          sendNotification(device_token, device_type, {
+            participant_id: participant_id,
+            activity_id: data.activity_id,
+            message: data.message,
+            title: data.title,
+            url: `/participant/${participant_id}/activity/${data.activity_id}`,
+            notificationId: !!data.notificationIds ? data.notificationIds : undefined,
+          })
+        }
       }
     }
   } catch (error) {}
