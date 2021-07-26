@@ -11,9 +11,13 @@ const clientLock = new Mutex()
  */
 export async function SchedulerQueueProcess(job: Bull.Job<any>, done: Bull.DoneCallback): Promise<void> {
   const data: any = job.data
-  try {
-    //removing duplicate device token (if any)
-    if (job.data.start_date === undefined || new Date() >= job.data.start_date) {
+  try { 
+    let start_notify=true
+    if(job.data.start_date !== undefined) {
+      if(new Date(job.data.start_date).getTime() > new Date().getTime())
+      start_notify=false
+    }
+    if (start_notify) {
       const uniqueParticipants = await removeDuplicateParticipants(data.participants)
       for (const device of uniqueParticipants) {
         const device_type = device.device_type
