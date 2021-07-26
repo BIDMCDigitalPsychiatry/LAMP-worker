@@ -97,6 +97,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             const notification_id = !!schedule.notification_ids ? schedule.notification_ids[0] : undefined
             const scheduler_payload: any = {
               title: activity.name,
+              start_date: schedule.repeat_interval === "none" ? undefined : (schedule.start_date ?? undefined),
               message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
               activity_id: activity.id,
               participants: await removeDuplicateParticipants(Participants),
@@ -159,6 +160,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
               activity_id: activity.id,
               cronStr: cronStr,
               notificationIds: notification_id,
+              start_date: schedule.start_date,
             }
             await setCustomSchedule(activity_details, Participants)
           }
@@ -305,6 +307,7 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
         const notification_id = !!notificationIds[count] ? notificationIds[count] : undefined
         const scheduler_payload: any = {
           title: activity.name,
+          start_date: activity.start_date ?? undefined,
           message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
           activity_id: activity.activity_id,
           participants: await removeDuplicateParticipants(Participants),
