@@ -1,0 +1,14 @@
+# !!!
+.env*
+
+# !!
+node_modules/
+build/
+coverage/
+
+# !
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.ipynb_checkpoints
+
