@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   try {
     if (typeof process.env.REDIS_HOST === "string") {
       await initializeQueues()
-      RedisClient = new ioredis(        
+      RedisClient = new ioredis(
         parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
         process.env.REDIS_HOST.match(/\/\/([0-9a-zA-Z._]+)/g)?.[0]
       )
@@ -149,41 +149,46 @@ main()
           x.subscribe(topic, async (err, msg) => {
             const data = msg.data
             updateSchedule(topic, data.data)
-             //create folder uploads if not exists
-            if (!fs.existsSync(UploadPath)) {
-              fs.mkdirSync(UploadPath, {
-                recursive: true,
-              })
-            }
-            const related_tokens = await getRelatedTokens(data.token)
-            const researchers: any[] = await LAMP.Researcher.all()            
-            for (const researcher of researchers) {                           
-              //fetch researchers from LAMP
-              for (const related_token of related_tokens) {
-                const release = await clientLock.acquire()
-                try {
-                  // const scriptpaths:any = await LAMP.Type.getAttachment("7s9ts30kq0w67tdg1qhe","study.cadn2efwhrxkppq9tn9t.activity.pqhm5zd2rbgpt5bjx5by")
-                  const scriptpaths = (await LAMP.Type.getAttachment(
-                    researcher.id,
-                    `lamp.automation.${related_token}`
-                  )) as any
-                  if (!!scriptpaths.data) {
-                    console.log("automation script found for researcherid", `${researcher.id} against ${related_token}`)
-                    let buff = await Buffer.from(scriptpaths?.data, "base64")
-                    const file_identifier = `${Math.floor(Math.random() * 10000)}_${new Date().getTime()}`
-                    fs.writeFileSync(UploadPath + file_identifier + ".zip", buff)
-                    const paths = file_identifier + ".zip"
-                    console.log(
-                      `Executing the script uploaded for the Researcher, ${researcher.id} for the token ${related_token} `
-                    )
-                    //execute the script retrieved for the token
-                    await execScript(Array.isArray(paths) ? paths : [paths], JSON.stringify(data.data))                    
-                    console.log("unlinking paths", `${__dirname}/uploads/${paths} `)
-                    fs.unlinkSync(`${__dirname}/uploads/${paths}`)                    
+            if (!!process.env.DOCKER_IMAGE) {
+              //create folder uploads if not exists
+              if (!fs.existsSync(UploadPath)) {
+                fs.mkdirSync(UploadPath, {
+                  recursive: true,
+                })
+              }
+              const related_tokens = await getRelatedTokens(data.token)
+              const researchers: any[] = await LAMP.Researcher.all()
+              for (const researcher of researchers) {
+                //fetch researchers from LAMP
+                for (const related_token of related_tokens) {
+                  const release = await clientLock.acquire()
+                  try {
+                    // const scriptpaths:any = await LAMP.Type.getAttachment("7s9ts30kq0w67tdg1qhe","study.cadn2efwhrxkppq9tn9t.activity.pqhm5zd2rbgpt5bjx5by")
+                    const scriptpaths = (await LAMP.Type.getAttachment(
+                      researcher.id,
+                      `lamp.automation.${related_token}`
+                    )) as any
+                    if (!!scriptpaths.data) {
+                      console.log(
+                        "automation script found for researcherid",
+                        `${researcher.id} against ${related_token}`
+                      )
+                      let buff = await Buffer.from(scriptpaths?.data, "base64")
+                      const file_identifier = `${Math.floor(Math.random() * 10000)}_${new Date().getTime()}`
+                      fs.writeFileSync(UploadPath + file_identifier + ".zip", buff)
+                      const paths = file_identifier + ".zip"
+                      console.log(
+                        `Executing the script uploaded for the Researcher, ${researcher.id} for the token ${related_token} `
+                      )
+                      //execute the script retrieved for the token
+                      await execScript(Array.isArray(paths) ? paths : [paths], JSON.stringify(data.data))
+                      console.log("unlinking paths", `${__dirname}/uploads/${paths} `)
+                      fs.unlinkSync(`${__dirname}/uploads/${paths}`)
+                    }
+                    release()
+                  } catch (error) {
+                    release()
                   }
-                  release()
-                } catch (error) {
-                  release()
                 }
               }
             }
