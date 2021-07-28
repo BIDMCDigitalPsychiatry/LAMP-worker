@@ -93,11 +93,17 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
           if (schedule.time === "1970-01-01T12:48:00.000Z" || schedule.start_date === "1970-01-01T12:48:00.000Z")
             continue
           const cronStr = schedule.repeat_interval !== "none" ? await getCronScheduleString(schedule) : ""
+          let startDateExploded = schedule.start_date ? schedule.start_date.split('T'):undefined
+          let TimeExploded =schedule.time ? schedule.time.split('T'):undefined
+          let timHr = TimeExploded[1].split(':')[0]
+          let timMt = TimeExploded[1].split(':')[1]
+          let start_date = `${startDateExploded[0]}T${timHr}:${timMt}:00.000Z`
+          console.log("start_date========",start_date)
           if (schedule.repeat_interval !== "custom") {
             const notification_id = !!schedule.notification_ids ? schedule.notification_ids[0] : undefined
             const scheduler_payload: any = {
               title: activity.name,
-              start_date: schedule.repeat_interval === "none" ? undefined : (schedule.start_date ?? undefined),
+              start_date:(schedule.repeat_interval==='none')?undefined:start_date,
               message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
               activity_id: activity.id,
               participants: await removeDuplicateParticipants(Participants),
@@ -160,7 +166,8 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
               activity_id: activity.id,
               cronStr: cronStr,
               notificationIds: notification_id,
-              start_date: schedule.start_date,
+              start_date: start_date 
+              
             }
             await setCustomSchedule(activity_details, Participants)
           }
@@ -213,13 +220,14 @@ function getCronScheduleString(schedule: any): string {
   let cronStr = ""
   //feed date time
   const feedDateTime = new Date(schedule.time)
+  const feedStartDateTime = new Date(schedule.start_date)
   const followingDay = new Date(new Date(schedule.time).getTime() + 86400000) // + 1 day in ms
   let feedUTCNewHours = ""
   //get hour,minute,second formatted time from feed date time
   let feedHoursUtc: any = feedDateTime.getUTCHours()
   let feedMinutesUtc: any = feedDateTime.getUTCMinutes()
-  const sheduleDayNumber: number = new Date(feedDateTime).getUTCDay()
-  const sheduleMonthDate: number = new Date(feedDateTime).getUTCDate()
+  const sheduleDayNumber: number = new Date(feedStartDateTime).getUTCDay()
+  const sheduleMonthDate: number = new Date(feedStartDateTime).getUTCDate()
   //prepare cronstring for various schedules
   switch (schedule.repeat_interval) {
     case "triweekly":
