@@ -14,9 +14,15 @@ export async function SchedulerQueueProcess(job: Bull.Job<any>, done: Bull.DoneC
   try { 
     let start_notify=true
     if(data.start_date !== undefined) {
-      let today = new Date()
+      let today = new Date().toString()
+      let TimeExploded = today.split('T')
+      let timHr = TimeExploded[1].split(':')[0]
+      let timMt = TimeExploded[1].split(':')[1]
+      let today_date = new Date(`${TimeExploded[0]}T${timHr}:${timMt}:00.000Z`)
       let start_date = new Date(data.start_date)
-      if(start_date > today)
+      console.log("today_date while notify",today_date)
+      console.log("start_date while notify",start_date)
+      if(start_date > today_date)
        start_notify=false
     }
     if (start_notify) {
