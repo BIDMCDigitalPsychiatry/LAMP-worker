@@ -146,16 +146,23 @@ main()
         payload: Payload.JSON,
       }).then((x) =>
         topics.map((topic: any) => {
+          console.log("topic published",topic)
           x.subscribe(topic, async (err, msg) => {
             const data = msg.data
+            console.log("data published",data)
             updateSchedule(topic, data.data)
             if (!!process.env.DOCKER_IMAGE) {
-              //create folder uploads if not exists
-              if (!fs.existsSync(UploadPath)) {
-                fs.mkdirSync(UploadPath, {
-                  recursive: true,
-                })
+              try {
+                //create folder uploads if not exists
+                 if (!fs.existsSync(UploadPath)) {
+                    fs.mkdirSync(UploadPath, {
+                     recursive: true,
+                    })
+                  }                
+              } catch (error) {
+                console.log("error while creating directory ",error)
               }
+             
               const related_tokens = await getRelatedTokens(data.token)
               const researchers: any[] = await LAMP.Researcher.all()
               for (const researcher of researchers) {
@@ -199,7 +206,7 @@ main()
       _server.listen(process.env.PORT || 3000)
     } catch (error) {
       // tslint:disable-next-line:no-console
-      console.log(error)
+      console.log("error---while subscribing token",error)
     }
   })
   .catch(console.error)
