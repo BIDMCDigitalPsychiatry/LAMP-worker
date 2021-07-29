@@ -93,17 +93,17 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
           if (schedule.time === "1970-01-01T12:48:00.000Z" || schedule.start_date === "1970-01-01T12:48:00.000Z")
             continue
           const cronStr = schedule.repeat_interval !== "none" ? await getCronScheduleString(schedule) : ""
-          let startDateExploded = schedule.start_date ? schedule.start_date.split('T'):undefined
-          let TimeExploded =schedule.time ? schedule.time.split('T'):undefined
-          let timHr = TimeExploded[1].split(':')[0]
-          let timMt = TimeExploded[1].split(':')[1]
+          let startDateExploded = schedule.start_date ? schedule.start_date.split("T") : undefined
+          let TimeExploded = schedule.time ? schedule.time.split("T") : undefined
+          let timHr = TimeExploded[1].split(":")[0]
+          let timMt = TimeExploded[1].split(":")[1]
           let start_date = `${startDateExploded[0]}T${timHr}:${timMt}:00.000Z`
-          console.log("start_date========",start_date)
+          console.log("start_date========", start_date)
           if (schedule.repeat_interval !== "custom") {
             const notification_id = !!schedule.notification_ids ? schedule.notification_ids[0] : undefined
             const scheduler_payload: any = {
               title: activity.name,
-              start_date:(schedule.repeat_interval==='none')?undefined:start_date,
+              start_date: schedule.repeat_interval === "none" ? undefined : start_date,
               message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
               activity_id: activity.id,
               participants: await removeDuplicateParticipants(Participants),
@@ -166,8 +166,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
               activity_id: activity.id,
               cronStr: cronStr,
               notificationIds: notification_id,
-              start_date: start_date 
-              
+              start_date: start_date,
             }
             await setCustomSchedule(activity_details, Participants)
           }
@@ -189,25 +188,39 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
  */
 export const NotificationScheduling = async (): Promise<void> => {
   if (!!process.env.REDIS_HOST && !!SchedulerQueue) {
-    //fetch all researchers
-    const researchers = await LAMP.Researcher.all()
-    for (let researcher of researchers) {
-      let studies: any[] = []
-      try {
-        //fetch researcher based studies
-        studies = await LAMP.Study.allByResearcher(researcher.id as string)
-      } catch (error) {}
-      for (let study of studies) {
-        let activities: any[] = []
+    try {
+      //fetch all researchers
+      const researchers = await LAMP.Researcher.all()
+      console.log("researchers", researchers)
+      for (let researcher of researchers) {
+        let studies: any[] = []
         try {
-          activities = (await LAMP.Activity.allByStudy(study.id as string, undefined, true)) as any
-        } catch (error) {}
-        for (let activity of activities) {
-          //set scheduler for each activity which contain valid schedules
-          if (activity.schedule === undefined || activity?.schedule?.length === 0) continue
-          ActivityScheduler(activity.id, study.id, [activity] as any)
+          //fetch researcher based studies
+          studies = await LAMP.Study.allByResearcher(researcher.id as string)
+        } catch (error) {
+          console.log("error while fetching researcher---", error)
+        }
+        for (let study of studies) {
+          let activities: any[] = []
+          try {
+            activities = (await LAMP.Activity.allByStudy(study.id as string, undefined, true)) as any
+          } catch (error) {
+            console.log("error while fetching activities---", error)
+          }
+          for (let activity of activities) {
+            try {
+              //set scheduler for each activity which contain valid schedules
+              if (activity.schedule === undefined || activity?.schedule?.length === 0) continue
+              await ActivityScheduler(activity.id, study.id, [activity] as any)
+            } catch (error) {
+              console.log("error while schedule start---", error)
+            }
+          }
         }
       }
+      console.log("scheduling completed")
+    } catch (error) {
+      console.log("error while scheduling initially---", error)
     }
   }
 }
