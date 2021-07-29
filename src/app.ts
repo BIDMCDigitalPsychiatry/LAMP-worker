@@ -19,7 +19,7 @@ export let RedisClient: ioredis.Redis | undefined
 
 //LAMP-worker topics
 const topics = ["activity_event", "activity", "participant", "researcher", "sensor_event", "sensor", "study"]
-
+process.on('unhandledRejection', error => { console.dir(error) })
 /**Initialize and configure the application.
  *
  */
