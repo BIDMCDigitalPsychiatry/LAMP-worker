@@ -81,6 +81,7 @@ const getRelatedTokens = async (token: string): Promise<string[]> => {
     }
     return related_tokens
   } catch (error) {
+    console.log("token generation",error)
     return []
   }
 }
@@ -202,8 +203,13 @@ main()
           })
         })
       )
-      //Starting the server
-      _server.listen(process.env.PORT || 3000)
+      try {  
+        //Starting the server
+        _server.listen(process.env.PORT || 3000)
+        console.log(`server listening in ${process.env.PORT}` )
+      } catch (error) {
+        console.log("error---while server listen",error)
+      }
     } catch (error) {
       // tslint:disable-next-line:no-console
       console.log("error---while subscribing token",error)

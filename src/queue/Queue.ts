@@ -15,6 +15,7 @@ export let DeleteFromSchedulerQueue: Bull.Queue<any> | undefined
  */
 export async function initializeQueues(): Promise<void> {
   try {
+    console.log("initialize queue")
     SchedulerQueue = new Bull("Scheduler", process.env.REDIS_HOST ?? "")
     SchedulerReferenceQueue = new Bull("SchedulerReference", process.env.REDIS_HOST ?? "")
     UpdateToSchedulerQueue = new Bull("UpdateToScheduler", process.env.REDIS_HOST ?? "")
@@ -37,6 +38,6 @@ export async function initializeQueues(): Promise<void> {
       DeleteFromSchedulerQueueProcess(job, done)
     })
   } catch (error) {
-    console.log(error)
+    console.log("initialize queue",error)
   }
 }
