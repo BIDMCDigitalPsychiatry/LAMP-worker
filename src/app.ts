@@ -8,14 +8,12 @@ import { ScriptRunner } from "./helpers/ScriptRunner"
 import { NotificationScheduling, cleanAllQueues, updateSchedule } from "./queue/ActivitySchedulerJob"
 import { initializeQueues } from "./queue/Queue"
 import { Mutex } from "async-mutex"
-import ioredis from "ioredis"
 import LAMP from "lamp-core"
 const clientLock = new Mutex()
 const app: Application = express()
 const UploadPath = __dirname + "/uploads/"
-
 const _server = app
-// export let RedisClient: ioredis.Redis | undefined
+
 
 //LAMP-worker topics
 const topics = ["activity_event", "activity", "participant", "researcher", "sensor_event", "sensor", "study"]
@@ -25,13 +23,12 @@ process.on('unhandledRejection', error => { console.dir(error) })
  */
 async function main(): Promise<void> {
   try {
+    console.log("Prepare queues")
     if (typeof process.env.REDIS_HOST === "string") {
-      await initializeQueues()
-      // RedisClient = new ioredis(
-      //   parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
-      //   process.env.REDIS_HOST.match(/\/\/([0-9a-zA-Z._]+)/g)?.[0]
-      // )
+      console.log("Initialize queues with ",process.env.REDIS_HOST)
+      await initializeQueues()      
     }
+    console.log("Initialized the queues")
     await ServerConnect()
     if (process.env.SCHEDULER === "on") {
       console.log("Clean all queues...")
