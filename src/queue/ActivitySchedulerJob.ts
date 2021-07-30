@@ -111,27 +111,31 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             }
 
             let SchedulerjobResponse: any = ""
-            if (schedule.repeat_interval !== "none") {
-              //repeatable job
-              SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
-                removeOnComplete: true,
-                removeOnFail: true,
-                backoff: 10000,
-                attempts: 2,
-                repeat: { jobId: activity.id, cron: cronStr },
-              })
-            } else {
-              if (new Date(schedule.time) > new Date()) {
-                //non repeatable job
+            try {    
+              if (schedule.repeat_interval !== "none") {
+                //repeatable job
                 SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
                   removeOnComplete: true,
                   removeOnFail: true,
                   backoff: 10000,
                   attempts: 2,
-                  jobId: `${activity.id}|none|${new Date(schedule.time).getTime()}`,
-                  delay: Math.floor(new Date(schedule.time).getTime() - new Date().getTime()),
+                  repeat: { jobId: activity.id, cron: cronStr },
                 })
+              } else {
+                if (new Date(schedule.time) > new Date()) {
+                  //non repeatable job
+                  SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
+                    removeOnComplete: true,
+                    removeOnFail: true,
+                    backoff: 10000,
+                    attempts: 2,
+                    jobId: `${activity.id}|none|${new Date(schedule.time).getTime()}`,
+                    delay: Math.floor(new Date(schedule.time).getTime() - new Date().getTime()),
+                  })
+                }
               }
+            } catch (error) {
+                console.log("error while adding to scheduler queue---",error)
             }
             // updating ShedulerReference Queue(if already activity_id exists as JobId)
             const SchedulerReferenceJob = (await SchedulerReferenceQueue?.getJob(activity.id)) || null

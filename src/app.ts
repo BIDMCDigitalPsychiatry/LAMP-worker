@@ -41,9 +41,13 @@ async function main(): Promise<void> {
     } else {
       console.log("Running with schedulers disabled.")
     }
+    //Starting the server
+    _server.listen(process.env.PORT || 3000)
+    console.log(`server listening in ${process.env.PORT}` )
   } catch (error) {
-    console.log("Encountered issue while starting LAMP-worker")
+    console.log("Encountered issue while starting LAMP-worker",error)
   }
+  
 }
 
 /**
@@ -202,14 +206,7 @@ main()
             }
           })
         })
-      )
-      try {  
-        //Starting the server
-        _server.listen(process.env.PORT || 3000)
-        console.log(`server listening in ${process.env.PORT}` )
-      } catch (error) {
-        console.log("error---while server listen",error)
-      }
+      )     
     } catch (error) {
       // tslint:disable-next-line:no-console
       console.log("error---while subscribing token",error)
