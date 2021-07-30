@@ -23,21 +23,21 @@ process.on('unhandledRejection', error => { console.dir(error) })
  */
 async function main(): Promise<void> {
   try {
-    console.log("Prepare queues")
-    if (typeof process.env.REDIS_HOST === "string") {
-      console.log("Initialize queues with ",process.env.REDIS_HOST)
-      await initializeQueues()      
-    }
-    console.log("Initialized the queues")
-    await ServerConnect()
-    if (process.env.SCHEDULER === "on") {
-      console.log("Clean all queues...")
-      await cleanAllQueues()
-      console.log("Initializing schedulers...")
-      NotificationScheduling()
-    } else {
-      console.log("Running with schedulers disabled.")
-    }
+    // console.log("Prepare queues")
+    // if (typeof process.env.REDIS_HOST === "string") {
+    //   console.log("Initialize queues with ",process.env.REDIS_HOST)
+    //   await initializeQueues()      
+    // }
+    // console.log("Initialized the queues")
+    // await ServerConnect()
+    // if (process.env.SCHEDULER === "on") {
+    //   console.log("Clean all queues...")
+    //   await cleanAllQueues()
+    //   console.log("Initializing schedulers...")
+    //   NotificationScheduling()
+    // } else {
+    //   console.log("Running with schedulers disabled.")
+    // }
     //Starting the server
     _server.listen(process.env.PORT || 3000)
     console.log(`server listening in ${process.env.PORT}` )
@@ -146,7 +146,8 @@ main()
       connect({
         servers: [`${process.env.NATS_SERVER}`],
         payload: Payload.JSON,
-      }).then((x) =>
+      }).then((x) => {
+        console.log("data topic",x)
         topics.map((topic: any) => {
           console.log("topic published",topic)
           x.subscribe(topic, async (err, msg) => {
@@ -203,7 +204,9 @@ main()
             }
           })
         })
-      )     
+      }).catch((error)=>{
+        console.log("error---while nats connect",error)
+      })    
     } catch (error) {
       // tslint:disable-next-line:no-console
       console.log("error---while subscribing token",error)
