@@ -15,7 +15,7 @@ const app: Application = express()
 const UploadPath = __dirname + "/uploads/"
 
 const _server = app
-export let RedisClient: ioredis.Redis | undefined
+// export let RedisClient: ioredis.Redis | undefined
 
 //LAMP-worker topics
 const topics = ["activity_event", "activity", "participant", "researcher", "sensor_event", "sensor", "study"]
@@ -27,10 +27,10 @@ async function main(): Promise<void> {
   try {
     if (typeof process.env.REDIS_HOST === "string") {
       await initializeQueues()
-      RedisClient = new ioredis(
-        parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
-        process.env.REDIS_HOST.match(/\/\/([0-9a-zA-Z._]+)/g)?.[0]
-      )
+      // RedisClient = new ioredis(
+      //   parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
+      //   process.env.REDIS_HOST.match(/\/\/([0-9a-zA-Z._]+)/g)?.[0]
+      // )
     }
     await ServerConnect()
     if (process.env.SCHEDULER === "on") {
