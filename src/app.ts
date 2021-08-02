@@ -22,24 +22,23 @@ process.on('unhandledRejection', error => { console.dir(error) })
  *
  */
 async function main(): Promise<void> {
-  try {
-    // console.log("Prepare queues")
-    // if (typeof process.env.REDIS_HOST === "string") {
-    //   console.log("Initialize queues with ",process.env.REDIS_HOST)
-    //   await initializeQueues()      
-    // }
-    // console.log("Initialized the queues")
-    // await ServerConnect()
-    // if (process.env.SCHEDULER === "on") {
-    //   console.log("Clean all queues...")
-    //   await cleanAllQueues()
-    //   console.log("Initializing schedulers...")
-    //   NotificationScheduling()
-    // } else {
-    //   console.log("Running with schedulers disabled.")
-    // }
+  try {    
+    if (typeof process.env.REDIS_HOST === "string") {
+      console.log("Initialize queues with ",process.env.REDIS_HOST)
+      await initializeQueues()      
+    }
+    console.log("Initialized the queues")
+    await ServerConnect()
+    if (process.env.SCHEDULER === "on") {
+      console.log("Clean all queues...")
+      await cleanAllQueues()
+      console.log("Initializing schedulers...")
+      NotificationScheduling()
+    } else {
+      console.log("Running with schedulers disabled.")
+    }
     //Starting the server
-    _server.listen(3001)
+    _server.listen(process.env.PORT || 3000)
     console.log(`server listening in ${process.env.PORT}` )
   } catch (error) {
     console.log("Encountered issue while starting LAMP-worker",error)
@@ -137,79 +136,79 @@ const execScript = async (paths: string[], data?: any): Promise<void> => {
     }
   }
 }
-main().then(console.log).catch(console.error)
-// main()
-//   .then((x: any) => {
-//     //Initiate Nats server
-//     console.log("Initiating nats server")
-//     try {
-//       connect({
-//         servers: [`${process.env.NATS_SERVER}`],
-//         payload: Payload.JSON,
-//       }).then((x) => {
-//         console.log("data topic",x)
-//         topics.map((topic: any) => {
-//           console.log("topic published",topic)
-//           x.subscribe(topic, async (err, msg) => {
-//             const data = msg.data
-//             console.log("data published",data)
-//             updateSchedule(topic, data.data)
-//             if (!!process.env.DOCKER_IMAGE) {
-//               try {
-//                 //create folder uploads if not exists
-//                  if (!fs.existsSync(UploadPath)) {
-//                     fs.mkdirSync(UploadPath, {
-//                      recursive: true,
-//                     })
-//                   }                
-//               } catch (error) {
-//                 console.log("error while creating directory ",error)
-//               }
+
+main()
+  .then((x: any) => {
+    //Initiate Nats server
+    console.log("Initiating nats server")
+    try {
+      connect({
+        servers: [`${process.env.NATS_SERVER}`],
+        payload: Payload.JSON,
+      }).then((x) => {
+        console.log("data topic",x)
+        topics.map((topic: any) => {
+          console.log("topic published",topic)
+          x.subscribe(topic, async (err, msg) => {
+            const data = msg.data
+            console.log("data published",data)
+            updateSchedule(topic, data.data)
+            if (!!process.env.DOCKER_IMAGE) {
+              try {
+                //create folder uploads if not exists
+                 if (!fs.existsSync(UploadPath)) {
+                    fs.mkdirSync(UploadPath, {
+                     recursive: true,
+                    })
+                  }                
+              } catch (error) {
+                console.log("error while creating directory ",error)
+              }
              
-//               const related_tokens = await getRelatedTokens(data.token)
-//               const researchers: any[] = await LAMP.Researcher.all()
-//               for (const researcher of researchers) {
-//                 //fetch researchers from LAMP
-//                 for (const related_token of related_tokens) {
-//                   const release = await clientLock.acquire()
-//                   try {
-//                     // const scriptpaths:any = await LAMP.Type.getAttachment("7s9ts30kq0w67tdg1qhe","study.cadn2efwhrxkppq9tn9t.activity.pqhm5zd2rbgpt5bjx5by")
-//                     const scriptpaths = (await LAMP.Type.getAttachment(
-//                       researcher.id,
-//                       `lamp.automation.${related_token}`
-//                     )) as any
-//                     if (!!scriptpaths.data) {
-//                       console.log(
-//                         "automation script found for researcherid",
-//                         `${researcher.id} against ${related_token}`
-//                       )
-//                       let buff = await Buffer.from(scriptpaths?.data, "base64")
-//                       const file_identifier = `${Math.floor(Math.random() * 10000)}_${new Date().getTime()}`
-//                       fs.writeFileSync(UploadPath + file_identifier + ".zip", buff)
-//                       const paths = file_identifier + ".zip"
-//                       console.log(
-//                         `Executing the script uploaded for the Researcher, ${researcher.id} for the token ${related_token} `
-//                       )
-//                       //execute the script retrieved for the token
-//                       await execScript(Array.isArray(paths) ? paths : [paths], JSON.stringify(data.data))
-//                       console.log("unlinking paths", `${__dirname}/uploads/${paths} `)
-//                       fs.unlinkSync(`${__dirname}/uploads/${paths}`)
-//                     }
-//                     release()
-//                   } catch (error) {
-//                     release()
-//                   }
-//                 }
-//               }
-//             }
-//           })
-//         })
-//       }).catch((error)=>{
-//         console.log("error---while nats connect",error)
-//       })    
-//     } catch (error) {
-//       // tslint:disable-next-line:no-console
-//       console.log("error---while subscribing token",error)
-//     }
-//   })
-//   .catch(console.error)
+              const related_tokens = await getRelatedTokens(data.token)
+              const researchers: any[] = await LAMP.Researcher.all()
+              for (const researcher of researchers) {
+                //fetch researchers from LAMP
+                for (const related_token of related_tokens) {
+                  const release = await clientLock.acquire()
+                  try {
+                    // const scriptpaths:any = await LAMP.Type.getAttachment("7s9ts30kq0w67tdg1qhe","study.cadn2efwhrxkppq9tn9t.activity.pqhm5zd2rbgpt5bjx5by")
+                    const scriptpaths = (await LAMP.Type.getAttachment(
+                      researcher.id,
+                      `lamp.automation.${related_token}`
+                    )) as any
+                    if (!!scriptpaths.data) {
+                      console.log(
+                        "automation script found for researcherid",
+                        `${researcher.id} against ${related_token}`
+                      )
+                      let buff = await Buffer.from(scriptpaths?.data, "base64")
+                      const file_identifier = `${Math.floor(Math.random() * 10000)}_${new Date().getTime()}`
+                      fs.writeFileSync(UploadPath + file_identifier + ".zip", buff)
+                      const paths = file_identifier + ".zip"
+                      console.log(
+                        `Executing the script uploaded for the Researcher, ${researcher.id} for the token ${related_token} `
+                      )
+                      //execute the script retrieved for the token
+                      await execScript(Array.isArray(paths) ? paths : [paths], JSON.stringify(data.data))
+                      console.log("unlinking paths", `${__dirname}/uploads/${paths} `)
+                      fs.unlinkSync(`${__dirname}/uploads/${paths}`)
+                    }
+                    release()
+                  } catch (error) {
+                    release()
+                  }
+                }
+              }
+            }
+          })
+        })
+      }).catch((error)=>{
+        console.log("error---while nats connect",error)
+      })    
+    } catch (error) {
+      // tslint:disable-next-line:no-console
+      console.log("error---while subscribing token",error)
+    }
+  })
+  .catch(console.error)
