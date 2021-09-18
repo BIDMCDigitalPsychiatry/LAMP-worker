@@ -570,6 +570,7 @@ export async function cleanAllQueues(): Promise<any> {
 /**check for the presence of activity in the  topic published to get scheduled
  *
  * @param token
+ * @param data
  */
 export const updateSchedule = (topic: string, data: any) => {
   if (topic === "activity") {
@@ -577,15 +578,28 @@ export const updateSchedule = (topic: string, data: any) => {
     if (!!data_ && data_.action !== "delete") {
       console.log("post/update", JSON.parse(data))
       //update activity schedule in cache for add/update/delete of an activity
-      UpdateToSchedulerQueue?.add({ activity_id: data_.activity_id })
+      UpdateToSchedulerQueue?.add({ activity_id: data_.activity_id }, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        attempts: 3, 
+        backoff: 10000
+      })
     } else {
       //delete activity schedule in cache for delete of an activity
-      DeleteFromSchedulerQueue?.add({ activity_id: data.activity_id })
+      DeleteFromSchedulerQueue?.add({ activity_id: data.activity_id },
+        {
+        removeOnComplete: true,
+        removeOnFail: true,
+        attempts: 3, 
+        backoff: 10000
+      })
     }
   } else if (topic === "sensor_event") {
     const sensor = JSON.parse(data).sensor ?? undefined
-    const data_ = JSON.parse(data).data ?? undefined
+    const data_ = JSON.parse(data).data ?? undefined    
     const participant_id = JSON.parse(data).participant_id ?? undefined
+    console.log("participant_id listened",participant_id)
+    console.log("sensordata listened",data_)
     if (!!sensor && (sensor === "lamp.analytics" || sensor === "analytics") && undefined !== data_.device_token) {
       SchedulerDeviceUpdateQueue?.add(
         {
@@ -594,14 +608,14 @@ export const updateSchedule = (topic: string, data: any) => {
           participant_id: participant_id,
           mode: 1,
         },
-        { attempts: 3, backoff: 10, removeOnComplete: true, removeOnFail: true }
+        { attempts: 3, backoff: 10000, removeOnComplete: true, removeOnFail: true }
       )
     }
     //update activity schedule in cache for login/logout of an participant
     if ((sensor === "lamp.analytics" || sensor === "analytics") && data_.action === "logout") {
       SchedulerDeviceUpdateQueue?.add(
         { device_type: undefined, device_token: undefined, participant_id: participant_id, mode: 2 },
-        { attempts: 3, backoff: 10, removeOnComplete: true, removeOnFail: true }
+        { attempts: 3, backoff: 10000, removeOnComplete: true, removeOnFail: true }
       )
     }
   }
