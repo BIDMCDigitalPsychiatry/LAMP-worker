@@ -146,12 +146,9 @@ main()
         servers: [`${process.env.NATS_SERVER}`],
         payload: Payload.JSON,
       }).then((x) => {
-        console.log("data topic",x)
         topics.map((topic: any) => {
-          console.log("topic published",topic)
           x.subscribe(topic, async (err, msg) => {
             const data = msg.data
-            console.log("data published",data)
             updateSchedule(topic, data.data)
             if (!!process.env.DOCKER_IMAGE) {
               try {
