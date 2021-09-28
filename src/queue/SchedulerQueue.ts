@@ -100,7 +100,7 @@ export function sendNotification(device_token: string, device_type: string, payl
                 message: `${payload.message}`,
                 page: `${url}`,
                 notificationId: notificationId,
-                actions: [{ name: "Open App", page: `${process.env.DASHBOARD_URL}` }],
+                actions: [{ name: "Open App", page: `${url}` }],
                 expiry: 21600000,
               },
             },
