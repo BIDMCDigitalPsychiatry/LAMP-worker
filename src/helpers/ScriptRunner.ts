@@ -3,13 +3,15 @@ import tar from "tar-stream"
 import Stream from "stream"
 
 let Docker:_Docker
-if(process.env.DOCKER_ADDR)
- Docker = new _Docker({
-  host: `${process.env.DOCKER_ADDR?.split(":")[0]}`,
-  port: `${process.env.DOCKER_ADDR?.split(":")[1]}`,
-})
+if (!!process.env.DOCKER_ADDR 
+  && !!process.env.DOCKER_ADDR?.split(":")[0]
+  && !!process.env.DOCKER_ADDR?.split(":")[1])
+   Docker = new _Docker({
+    host: `${process.env.DOCKER_ADDR?.split(":")[0]}`,
+    port: `${process.env.DOCKER_ADDR?.split(":")[1]}`,
+  })
 else
-Docker = new _Docker({ socketPath: "/var/run/docker.sock"})
+ Docker = new _Docker({ socketPath: "/var/run/docker.sock"})
 const base_image = `node:16.8.0-alpine3.13`
 export abstract class ScriptRunner {
   public abstract execute(script: string, driver_script: string|undefined, trigger:string, data?: any | undefined): Promise<void>
