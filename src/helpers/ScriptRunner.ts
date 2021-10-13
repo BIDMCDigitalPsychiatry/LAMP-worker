@@ -3,6 +3,9 @@ import tar from "tar-stream"
 import Stream from "stream"
 
 let Docker:_Docker
+try {
+  
+
 if (!!process.env.DOCKER_ADDR 
   && !!process.env.DOCKER_ADDR?.split(":")[0]
   && !!process.env.DOCKER_ADDR?.split(":")[1])
@@ -12,6 +15,9 @@ if (!!process.env.DOCKER_ADDR
   })
 else
  Docker = new _Docker({ socketPath: "/var/run/docker.sock"})
+} catch (error) {
+  console.log("Error configuring docker",error)
+} 
 const base_image = `node:16.8.0-alpine3.13`
 export abstract class ScriptRunner {
   public abstract execute(script: string, driver_script: string|undefined, trigger:string, data?: any | undefined): Promise<void>
