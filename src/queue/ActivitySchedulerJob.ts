@@ -52,8 +52,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
       } catch (error) {
         console.log("Error fetching participants by study")
         continue
-      }
-      console.log("participantslength", participants.length)
+      }      
       if (participants.length === 0) continue
       const Participants: any[] = []
       for (const participant of participants) {
@@ -111,7 +110,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             }
 
             let SchedulerjobResponse: any = ""
-            try {    
+            try {
               if (schedule.repeat_interval !== "none") {
                 //repeatable job
                 SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
@@ -135,7 +134,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
                 }
               }
             } catch (error) {
-                console.log("error while adding to scheduler queue---",error)
+              console.log("error while adding to scheduler queue---", error)
             }
             // updating ShedulerReference Queue(if already activity_id exists as JobId)
             const SchedulerReferenceJob = (await SchedulerReferenceQueue?.getJob(activity.id)) || null
@@ -194,8 +193,7 @@ export const NotificationScheduling = async (): Promise<void> => {
   if (!!process.env.REDIS_HOST && !!SchedulerQueue) {
     try {
       //fetch all researchers
-      const researchers = await LAMP.Researcher.all()
-      console.log("researchers", researchers)
+      const researchers = (await LAMP.Researcher.all())
       for (let researcher of researchers) {
         let studies: any[] = []
         try {
@@ -207,7 +205,7 @@ export const NotificationScheduling = async (): Promise<void> => {
         for (let study of studies) {
           let activities: any[] = []
           try {
-            activities = (await LAMP.Activity.allByStudy(study.id as string, undefined, true)) as any
+            activities = (await LAMP.Activity.allByStudy(study.id as string, undefined, true))
           } catch (error) {
             console.log("error while fetching activities---", error)
           }
@@ -228,6 +226,7 @@ export const NotificationScheduling = async (): Promise<void> => {
     }
   }
 }
+
 /**get the cron string
  *
  * @param array schedule
@@ -572,34 +571,39 @@ export async function cleanAllQueues(): Promise<any> {
  * @param token
  * @param data
  */
-export const updateSchedule = (topic: string, data: any) => {
+export const UpdateSchedule = (topic: string, data: any) => {
   if (topic === "activity") {
     const data_ = JSON.parse(data) ?? undefined
     if (!!data_ && data_.action !== "delete") {
       console.log("post/update", JSON.parse(data))
       //update activity schedule in cache for add/update/delete of an activity
-      UpdateToSchedulerQueue?.add({ activity_id: data_.activity_id }, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        attempts: 3, 
-        backoff: 10000
-      })
+      UpdateToSchedulerQueue?.add(
+        { activity_id: data_.activity_id },
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+          attempts: 3,
+          backoff: 10000,
+        }
+      )
     } else {
       //delete activity schedule in cache for delete of an activity
-      DeleteFromSchedulerQueue?.add({ activity_id: data.activity_id },
+      DeleteFromSchedulerQueue?.add(
+        { activity_id: data.activity_id },
         {
-        removeOnComplete: true,
-        removeOnFail: true,
-        attempts: 3, 
-        backoff: 10000
-      })
+          removeOnComplete: true,
+          removeOnFail: true,
+          attempts: 3,
+          backoff: 10000,
+        }
+      )
     }
   } else if (topic === "sensor_event") {
     const sensor = JSON.parse(data).sensor ?? undefined
-    const data_ = JSON.parse(data).data ?? undefined    
+    const data_ = JSON.parse(data).data ?? undefined
     const participant_id = JSON.parse(data).participant_id ?? undefined
-    console.log("participant_id listened",participant_id)
-    console.log("sensordata listened",data_)
+    console.log("participant_id listened", participant_id)
+    console.log("sensordata listened", data_)
     if (!!sensor && (sensor === "lamp.analytics" || sensor === "analytics") && undefined !== data_.device_token) {
       SchedulerDeviceUpdateQueue?.add(
         {

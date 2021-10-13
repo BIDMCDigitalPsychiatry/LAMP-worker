@@ -21,9 +21,6 @@ export async function initializeQueues(): Promise<void> {
     UpdateToSchedulerQueue = new Bull("UpdateToScheduler", process.env.REDIS_HOST ?? "")
     SchedulerDeviceUpdateQueue = new Bull("SchedulerDeviceUpdate", process.env.REDIS_HOST ?? "")
     DeleteFromSchedulerQueue = new Bull("DeleteFromScheduler", process.env.REDIS_HOST ?? "")
-    console.log("SchedulerQueue",SchedulerQueue)
-    console.log("SchedulerQueue",SchedulerReferenceQueue)
-    console.log("UpdateToSchedulerQueue",UpdateToSchedulerQueue)
 
     SchedulerQueue.process((job, done) => {
       SchedulerQueueProcess(job, done)
@@ -41,6 +38,6 @@ export async function initializeQueues(): Promise<void> {
       DeleteFromSchedulerQueueProcess(job, done)
     })
   } catch (error) {
-    console.log("initialize queue====",error)
+    console.log("initialize queue====", error)
   }
 }
