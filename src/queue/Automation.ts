@@ -13,10 +13,19 @@ export async function LocateAutomation(researcher_id: string) {
   } catch (error) {}
   const automation_script = automations?.data
   if (!!automation_script) {
-    const trigger_group = await automation_script.split("trigger=")[1]
-    const triggers_ = (await trigger_group.split(";base64")[0].split("&")) as any
-    if (triggers_.length) {      
-      for (const trigger of triggers_) {
+    const automation_triggers = await automation_script.split("trigger=/")
+    const trigger_group = new Array
+    for (let automation_trigger of automation_triggers) {
+      if(automation_trigger.startsWith('data:')) continue      
+      await trigger_group.push(automation_trigger.split(";")[0])
+    }
+    const triggers_ = new Array
+    for (let group of trigger_group) {    
+      await triggers_.push(group.split('/').join('.'))
+    }   
+    
+    if (triggers_.length) {    
+      for (let trigger of triggers_) {
         try {          
           if (!!triggers[trigger]) {
             if (!triggers[trigger].includes(researcher_id)) await triggers[trigger].push(researcher_id)
@@ -57,20 +66,20 @@ export const TriggerAutomations = async (token: string, data: any) => {
       const researchers = triggers[related_token]
       for (const researcher of researchers) {
         try {
-          const automations = (await LAMP.Type.getAttachment(researcher, "lamp.automation")) as any
-          console.log(`Automation found for researcher - ${researcher} with token-${related_token}`)
+          const automations = (await LAMP.Type.getAttachment(researcher, "lamp.automation")) as any          
           const automation_script = automations?.data ?? undefined
-          if (!!automation_script) {
-            const script: string = await automation_script.split(";base64,")[1]
+          if (!!automation_script) {            
+            const script: string = await automation_script.split(";base64,")[1]                       
             const language: string = await automation_script.split("language=")[1].split(";")[0]
-            const driverscript: string = automation_script?.split("driverscript=")[1].split(";")[0]??undefined
-            let runner: ScriptRunner
+            console.log(`Automation found for researcher - ${researcher} with token-${related_token}`) 
+            const driverscript: string|undefined = await automation_script?.split("driverscript=")[1]?.split(";")[0]
+             let runner: ScriptRunner
             switch (language) {
-              case "js":
+              case "js":                
                 runner = new ScriptRunner.JS()
                 runner.execute(script, driverscript, related_token, JSON.stringify(data))
                 break
-              case "py":
+              case "py":                
                 runner = new ScriptRunner.PY()
                 runner.execute(script, driverscript, related_token, JSON.stringify(data))
                 break
