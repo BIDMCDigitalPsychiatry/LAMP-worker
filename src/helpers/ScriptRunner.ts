@@ -2,25 +2,25 @@ import _Docker from "dockerode"
 import tar from "tar-stream"
 import Stream from "stream"
 
-let Docker:_Docker
+let Docker: _Docker
 try {
-  
-
-if (!!process.env.DOCKER_ADDR 
-  && !!process.env.DOCKER_ADDR?.split(":")[0]
-  && !!process.env.DOCKER_ADDR?.split(":")[1])
-   Docker = new _Docker({
-    host: `${process.env.DOCKER_ADDR?.split(":")[0]}`,
-    port: `${process.env.DOCKER_ADDR?.split(":")[1]}`,
-  })
-else
- Docker = new _Docker({ socketPath: "/var/run/docker.sock"})
+  if (!!process.env.DOCKER_ADDR && !!process.env.DOCKER_ADDR?.split(":")[0] && !!process.env.DOCKER_ADDR?.split(":")[1])
+    Docker = new _Docker({
+      host: `${process.env.DOCKER_ADDR?.split(":")[0]}`,
+      port: `${process.env.DOCKER_ADDR?.split(":")[1]}`,
+    })
+  else Docker = new _Docker({ socketPath: "/var/run/docker.sock" })
 } catch (error) {
-  console.log("Error configuring docker",error)
-} 
+  console.log("Error configuring docker", error)
+}
 const base_image = `node:16.8.0-alpine3.13`
 export abstract class ScriptRunner {
-  public abstract execute(script: string, driver_script: string|undefined, trigger:string, data?: any | undefined): Promise<void>
+  public abstract execute(
+    script: string,
+    driver_script: string | undefined,
+    trigger: string,
+    data?: any | undefined
+  ): Promise<void>
 
   /** Run JS script inside the container
    * @param string script
@@ -29,8 +29,14 @@ export abstract class ScriptRunner {
    * @param string data
    */
   public static JS = class extends ScriptRunner {
-    async execute(script: string, driver_script: string, trigger:string, data?: any | undefined): Promise<any> {
-      const exists = await Docker.listImages({ filters: { reference: [base_image] } })
+    async execute(script: string, driver_script: string, trigger: string, data?: any | undefined): Promise<any> {
+      let exists=new Array
+      try {
+        exists = await Docker.listImages({ filters: { reference: [base_image] } })
+      } catch (error) {
+        console.log("error communicating with docker daemon",error)
+      }
+       
       if (exists.length === 0) {
         console.log("Creating docker image...")
         const image = await Docker.pull(base_image, {})
@@ -80,12 +86,21 @@ export abstract class ScriptRunner {
           logs.push(
             await containerExec(
               container,
-              `cd src/ && npm install ${output} && node ${!!driver_script ? driver_script:"main.js"} ${!!data ? data : undefined} ${trigger}`,
+              `cd src/ && npm install ${output} && node ${!!driver_script ? driver_script : "main.js"} ${
+                !!data ? data : undefined
+              } ${trigger}`,
               "js"
             )
           )
-        else logs.push(await containerExec(container, `cd src/  
-        &&  node ${!!driver_script ? driver_script:"main.js"} ${!!data ? data : undefined} ${trigger}`, "js"))
+        else
+          logs.push(
+            await containerExec(
+              container,
+              `cd src/  
+        &&  node ${!!driver_script ? driver_script : "main.js"} ${!!data ? data : undefined} ${trigger}`,
+              "js"
+            )
+          )
         console.log(`Script execution finished.`)
       } catch (e) {
         console.error(e)
@@ -104,7 +119,7 @@ export abstract class ScriptRunner {
    *@param string data
    */
   public static PY = class extends ScriptRunner {
-    async execute(script: string, driver_script: string, trigger:string, data?: any | undefined): Promise<void> {
+    async execute(script: string, driver_script: string, trigger: string, data?: any | undefined): Promise<void> {
       // Build a new image with an inline Dockerfile unless one already exists.
       const exists = await Docker.listImages({ filters: { reference: [base_image] } })
       if (exists.length === 0) {
@@ -140,29 +155,36 @@ export abstract class ScriptRunner {
         )
         //unzip files inside working directory
         logs.push(
-          await containerExec(
-            container,
-            `cd src/ && node index.js && rm -r index.js && unzip script.zip`,
-            "js"
-          )
+          await containerExec(container, `cd src/ && node index.js && rm -r index.js && unzip script.zip`, "js")
         )
         //identify requirements/dependencies if exist after unzipping
         const output = (
           await getFileInTar(await container.getArchive({ path: "/src/requirements.txt" }), "/src/requirements.txt")
         ).toString("utf8") as any
-        
+
         //run the driver script after installing requirements/dependencies(if exists)
         if (!!output)
           logs.push(
             await containerExec(
               container,
               `cd src/ && apk update && apk add python3 && 
-              apk add py3-pip && pip3 install -r requirements.txt && python3 ${!!driver_script ? driver_script:"main.py"} ${!!data ? data : undefined} ${trigger}`,
+              apk add py3-pip && pip3 install -r requirements.txt && python3 ${
+                !!driver_script ? driver_script : "main.py"
+              } ${!!data ? data : undefined} ${trigger}`,
               "py"
             )
           )
-        else logs.push(await containerExec(container, `cd src/  &&
-        apk update && apk add python3 &&  python3 ${!!driver_script ? driver_script:"main.py"} ${!!data ? data : undefined} ${trigger}`, "py"))
+        else
+          logs.push(
+            await containerExec(
+              container,
+              `cd src/  &&
+        apk update && apk add python3 &&  python3 ${!!driver_script ? driver_script : "main.py"} ${
+                !!data ? data : undefined
+              } ${trigger}`,
+              "py"
+            )
+          )
         console.log(`Script execution finished.`)
       } catch (error) {
         console.error(error)
