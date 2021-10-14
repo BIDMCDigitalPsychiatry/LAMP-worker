@@ -120,8 +120,14 @@ export abstract class ScriptRunner {
    */
   public static PY = class extends ScriptRunner {
     async execute(script: string, driver_script: string, trigger: string, data?: any | undefined): Promise<void> {
-      // Build a new image with an inline Dockerfile unless one already exists.
-      const exists = await Docker.listImages({ filters: { reference: [base_image] } })
+      let exists=new Array
+      try {
+        // Build a new image  unless one already exists.
+        exists = await Docker.listImages({ filters: { reference: [base_image] } })
+      } catch (error) {
+        console.log("error communicating with docker daemon",error)
+      }
+      
       if (exists.length === 0) {
         console.log("Creating docker image...")
         const image = await Docker.pull(base_image, {})
