@@ -92,6 +92,7 @@ main()
       connect({
         servers: [`${process.env.NATS_SERVER}`],
         payload: Payload.JSON,
+        maxReconnectAttempts:-1
       })
         .then((x) => {
           topics.map((topic: any) => {
