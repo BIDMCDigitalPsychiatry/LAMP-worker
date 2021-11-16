@@ -306,6 +306,9 @@ function getCronScheduleString(schedule: any): string {
     case "bimonthly":
       cronStr = `${feedMinutesUtc} ${feedHoursUtc} 10,20 * *`
       break
+    case "fortnightly":       
+      cronStr = `${feedMinutesUtc} ${feedHoursUtc} ${sheduleDayNumber},${sheduleDayNumber +14} * *`
+      break
 
     default:
       break
