@@ -308,8 +308,32 @@ function getCronScheduleString(schedule: any): string {
       break
     case "fortnightly":       
       cronStr = `${feedMinutesUtc} ${feedHoursUtc} ${sheduleDayNumber},${sheduleDayNumber +14} * *`
+      break    
+    case "fortnightly":
+      let startDateExploded = schedule.start_date ? schedule.start_date.split("T") : undefined
+      let TimeExploded = schedule.time ? schedule.time.split("T") : undefined
+      let timHr_ = TimeExploded[1].split(":")[0]
+      let timMt_ = TimeExploded[1].split(":")[1]
+      let start_date = `${startDateExploded[0]}T${timHr_}:${timMt_}:00.000Z`
+      
+      let next_=new Date(start_date)
+      next_.setDate(next_.getDate() + 14);    
+      let now = new Date();         
+      let date_now = `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}T${now.getUTCHours()}:${now.getUTCMinutes()}:00.000Z`
+      console.log("now",date_now)
+      console.log("start_date",start_date)
+      // let new_date = new Date(feedStartDateTime.setDate(feedStartDateTime.getDate() + 14));
+      if (new Date(date_now) > new Date(start_date) ) {  
+        console.log('now is greater than start date')    
+        next_ = new Date(`${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}T${timHr_}:${timMt_}:00.000Z`)
+        next_.setDate(next_.getDate() + 14);
+      }
+      console.log('new_date///',next_)
+      let newsheduleDay = next_.getUTCDate()
+      console.log('newsheduleDay',newsheduleDay)
+      cronStr = `${timMt_} ${timHr_} ${newsheduleDay} * *`
+      console.log('cronStr',cronStr)      
       break
-
     default:
       break
   }
