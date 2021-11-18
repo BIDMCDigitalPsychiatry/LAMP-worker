@@ -52,7 +52,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
       } catch (error) {
         console.log("Error fetching participants by study")
         continue
-      }      
+      }
       if (participants.length === 0) continue
       const Participants: any[] = []
       for (const participant of participants) {
@@ -193,7 +193,7 @@ export const NotificationScheduling = async (): Promise<void> => {
   if (!!process.env.REDIS_HOST && !!SchedulerQueue) {
     try {
       //fetch all researchers
-      const researchers = (await LAMP.Researcher.all())
+      const researchers = await LAMP.Researcher.all()
       for (let researcher of researchers) {
         let studies: any[] = []
         try {
@@ -205,7 +205,7 @@ export const NotificationScheduling = async (): Promise<void> => {
         for (let study of studies) {
           let activities: any[] = []
           try {
-            activities = (await LAMP.Activity.allByStudy(study.id as string, undefined, true))
+            activities = await LAMP.Activity.allByStudy(study.id as string, undefined, true)
           } catch (error) {
             console.log("error while fetching activities---", error)
           }
@@ -306,33 +306,43 @@ function getCronScheduleString(schedule: any): string {
     case "bimonthly":
       cronStr = `${feedMinutesUtc} ${feedHoursUtc} 10,20 * *`
       break
-    case "fortnightly":       
-      cronStr = `${feedMinutesUtc} ${feedHoursUtc} ${sheduleDayNumber},${sheduleDayNumber +14} * *`
-      break    
     case "fortnightly":
       let startDateExploded = schedule.start_date ? schedule.start_date.split("T") : undefined
       let TimeExploded = schedule.time ? schedule.time.split("T") : undefined
       let timHr_ = TimeExploded[1].split(":")[0]
       let timMt_ = TimeExploded[1].split(":")[1]
       let start_date = `${startDateExploded[0]}T${timHr_}:${timMt_}:00.000Z`
-      
-      let next_=new Date(start_date)
-      next_.setDate(next_.getDate() + 14);    
-      let now = new Date();         
-      let date_now = `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}T${now.getUTCHours()}:${now.getUTCMinutes()}:00.000Z`
-      console.log("now",date_now)
-      console.log("start_date",start_date)
+      let next_ = new Date(start_date)
+      next_.setDate(next_.getDate() + 14)
+      let now = new Date()
+      let timHr:number|string = now.getUTCHours()
+      let timMt:number|string = now.getUTCMinutes()
+      let dtMnt:number|string = now.getUTCMonth() + 1
+      let dtDate:number|string = now.getUTCDate()
+      timHr = timHr<10 ? `0${timHr}` : timHr
+      timMt = timMt<10 ? `0${timMt}` : timMt
+      dtMnt = dtMnt<10 ? `0${dtMnt}` : dtMnt
+      dtDate = dtDate<10 ? `0${dtDate}` : dtDate
+      console.log('timHr',timHr)
+      console.log('timMt',timMt)
+      console.log('dtMnt',dtMnt)
+      console.log('dtDate',dtDate)
+      let date_now = `${now.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr}:${timMt}:00.000Z`
+      console.log("now", date_now)
+      console.log("start_date", start_date)
       // let new_date = new Date(feedStartDateTime.setDate(feedStartDateTime.getDate() + 14));
-      if (new Date(date_now) > new Date(start_date) ) {  
-        console.log('now is greater than start date')    
-        next_ = new Date(`${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}T${timHr_}:${timMt_}:00.000Z`)
-        next_.setDate(next_.getDate() + 14);
+      if (new Date(date_now) > new Date(start_date)) {
+        console.log("now is greater than start date")
+        next_ = new Date(
+          `${now.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr_}:${timMt_}:00.000Z`
+        )
+        next_.setDate(next_.getDate() + 14)
       }
-      console.log('new_date///',next_)
+      console.log("new_date///", next_)
       let newsheduleDay = next_.getUTCDate()
-      console.log('newsheduleDay',newsheduleDay)
+      console.log("newsheduleDay", newsheduleDay)
       cronStr = `${timMt_} ${timHr_} ${newsheduleDay} * *`
-      console.log('cronStr',cronStr)      
+      console.log("cronStr", cronStr)
       break
     default:
       break
