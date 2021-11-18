@@ -43,7 +43,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
           study = parent?.data.Study
         }
       } catch (error) {
-        console.log("Error fetching Study")
+        console.log("Error fetching Study",error)
         continue
       }
       try {
@@ -191,7 +191,6 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
  */
 export const NotificationScheduling = async (): Promise<void> => {
   if (!!process.env.REDIS_HOST && !!SchedulerQueue) {
-    try {
       //fetch all researchers
       const researchers = await LAMP.Researcher.all()
       for (let researcher of researchers) {
@@ -220,10 +219,7 @@ export const NotificationScheduling = async (): Promise<void> => {
           }
         }
       }
-      console.log("scheduling completed")
-    } catch (error) {
-      console.log("error while scheduling initially---", error)
-    }
+      console.log("scheduling completed")    
   }
 }
 
