@@ -52,21 +52,26 @@ async function main(): Promise<void> {
       NotificationScheduling()
     } else {
       console.log("Running with schedulers disabled.")
-    }
-    if (!!process.env.AUTOMATION && process.env.AUTOMATION === "on") {
-      console.log("Locating automations...")
-      const researchers = (await LAMP.Researcher.all()) as any
-      for (let researcher of researchers) {
-        LocateAutomation(researcher.id)
-      }
-    } else {
-      console.log("Running with automation disabled.")
-    }
+    }    
     //Starting the server
     _server.listen(process.env.PORT || 3000)
     console.log(`server listening in ${process.env.PORT}`)
   } catch (error) {
     console.log("Encountered issue while starting LAMP-worker", error)
+  }
+  if (!!process.env.AUTOMATION && process.env.AUTOMATION === "on") {
+    console.log("Locating automations...")
+    const researchers = (await LAMP.Researcher.all()) as any
+    for (let researcher of researchers) {
+      try {
+        LocateAutomation(researcher.id)
+      } catch (error) {
+        console.log("Encountered issue Locating automation", error)
+      }
+      
+    }
+  } else {
+    console.log("Running with automation disabled.")
   }
 }
 
@@ -80,6 +85,7 @@ async function ServerConnect(): Promise<void> {
     const secretKey = process.env.LAMP_AUTH?.split(":")[1] as string
     await LAMP.connect({ accessKey: accessKey, secretKey: secretKey, serverAddress: server_url })
   } catch (error) {
+    console.log("Lamp server connect error",error)
     throw new error("Lamp server connection failed ")
   }
 }

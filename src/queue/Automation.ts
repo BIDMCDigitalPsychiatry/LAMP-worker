@@ -10,7 +10,9 @@ export async function LocateAutomation(researcher_id: string) {
   let automations: any = {}
   try {
     automations = await LAMP.Type.getAttachment(researcher_id, "lamp.automation")
-  } catch (error) {}
+  } catch (error) {
+    console.log('LocateAutomation',error)
+  }
   const automation_script = automations?.data
   if (!!automation_script) {
     const automation_triggers = await automation_script.split("trigger=/")
@@ -32,7 +34,9 @@ export async function LocateAutomation(researcher_id: string) {
           } else {
             triggers[trigger] = [researcher_id]
           }
-        } catch (error) {}
+        } catch (error) {
+          console.log('LocateAutomation2',error)
+        }
       }
     }
   } 
