@@ -315,16 +315,26 @@ function getCronScheduleString(schedule: any): string {
       let next_ = new Date(start_date)
       next_.setDate(next_.getDate() + 14)
       let now = new Date()
-      let date_now = `${now.getUTCFullYear()}-${
-        now.getUTCMonth() + 1
-      }-${now.getUTCDate()}T${now.getUTCHours()}:${now.getUTCMinutes()}:00.000Z`
+      let timHr:number|string = now.getUTCHours()
+      let timMt:number|string = now.getUTCMinutes()
+      let dtMnt:number|string = now.getUTCMonth() + 1
+      let dtDate:number|string = now.getUTCDate()
+      timHr = timHr<10 ? `0${timHr}` : timHr
+      timMt = timMt<10 ? `0${timMt}` : timMt
+      dtMnt = dtMnt<10 ? `0${dtMnt}` : dtMnt
+      dtDate = dtDate<10 ? `0${dtDate}` : dtDate
+      console.log('timHr',timHr)
+      console.log('timMt',timMt)
+      console.log('dtMnt',dtMnt)
+      console.log('dtDate',dtDate)
+      let date_now = `${now.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr}:${timMt}:00.000Z`
       console.log("now", date_now)
       console.log("start_date", start_date)
       // let new_date = new Date(feedStartDateTime.setDate(feedStartDateTime.getDate() + 14));
       if (new Date(date_now) > new Date(start_date)) {
         console.log("now is greater than start date")
         next_ = new Date(
-          `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}T${timHr_}:${timMt_}:00.000Z`
+          `${now.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr_}:${timMt_}:00.000Z`
         )
         next_.setDate(next_.getDate() + 14)
       }
