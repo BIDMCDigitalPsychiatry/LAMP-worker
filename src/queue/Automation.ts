@@ -92,7 +92,9 @@ export const TriggerAutomations = async (token: string, data: any) => {
                 break
             }
           }
-        } catch (error) {}
+        } catch (error) {
+          console.log("error while fetching automation script",error)
+        }
       }
     } else continue
   }
