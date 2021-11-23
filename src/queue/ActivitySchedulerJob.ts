@@ -43,7 +43,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
           study = parent?.data.Study
         }
       } catch (error) {
-        console.log("Error fetching Study",error)
+        console.log("Error fetching Study", error)
         continue
       }
       try {
@@ -112,7 +112,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             let SchedulerjobResponse: any = ""
             try {
               if (schedule.repeat_interval !== "none") {
-                //repeatable job
+                //repeatable job - daily,biweekly,hourly,monthly etc
                 SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
                   removeOnComplete: true,
                   removeOnFail: true,
@@ -120,16 +120,18 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
                   attempts: 2,
                   repeat: { jobId: activity.id, cron: cronStr },
                 })
+                if (schedule.repeat_interval === "fortnightly")
+                  await setFortnightlySchedule(scheduler_payload, activity.id)
               } else {
-                if (new Date(schedule.time) > new Date()) {
-                  //non repeatable job
+                if (new Date(start_date) > new Date()) {
+                  //non repeatable job --none
                   SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
                     removeOnComplete: true,
                     removeOnFail: true,
                     backoff: 10000,
                     attempts: 2,
-                    jobId: `${activity.id}|none|${new Date(schedule.time).getTime()}`,
-                    delay: Math.floor(new Date(schedule.time).getTime() - new Date().getTime()),
+                    jobId: `${activity.id}|none|${new Date(start_date).getTime()}`,
+                    delay: Math.floor(new Date(start_date).getTime() - new Date().getTime()),
                   })
                 }
               }
@@ -191,35 +193,35 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
  */
 export const NotificationScheduling = async (): Promise<void> => {
   if (!!process.env.REDIS_HOST && !!SchedulerQueue) {
-      //fetch all researchers
-      const researchers = await LAMP.Researcher.all()
-      for (let researcher of researchers) {
-        let studies: any[] = []
+    //fetch all researchers
+    const researchers = await LAMP.Researcher.all()
+    for (let researcher of researchers) {
+      let studies: any[] = []
+      try {
+        //fetch researcher based studies
+        studies = await LAMP.Study.allByResearcher(researcher.id as string)
+      } catch (error) {
+        console.log("error while fetching researcher---", error)
+      }
+      for (let study of studies) {
+        let activities: any[] = []
         try {
-          //fetch researcher based studies
-          studies = await LAMP.Study.allByResearcher(researcher.id as string)
+          activities = await LAMP.Activity.allByStudy(study.id as string, undefined, true)
         } catch (error) {
-          console.log("error while fetching researcher---", error)
+          console.log("error while fetching activities---", error)
         }
-        for (let study of studies) {
-          let activities: any[] = []
+        for (let activity of activities) {
           try {
-            activities = await LAMP.Activity.allByStudy(study.id as string, undefined, true)
+            //set scheduler for each activity which contain valid schedules
+            if (activity.schedule === undefined || activity?.schedule?.length === 0) continue
+            await ActivityScheduler(activity.id, study.id, [activity] as any)
           } catch (error) {
-            console.log("error while fetching activities---", error)
-          }
-          for (let activity of activities) {
-            try {
-              //set scheduler for each activity which contain valid schedules
-              if (activity.schedule === undefined || activity?.schedule?.length === 0) continue
-              await ActivityScheduler(activity.id, study.id, [activity] as any)
-            } catch (error) {
-              console.log("error while schedule start---", error)
-            }
+            console.log("error while schedule start---", error)
           }
         }
       }
-      console.log("scheduling completed")    
+    }
+    console.log("scheduling completed")
   }
 }
 
@@ -303,6 +305,7 @@ function getCronScheduleString(schedule: any): string {
       cronStr = `${feedMinutesUtc} ${feedHoursUtc} 10,20 * *`
       break
     case "fortnightly":
+      console.log("fortnightly schedule")
       let startDateExploded = schedule.start_date ? schedule.start_date.split("T") : undefined
       let TimeExploded = schedule.time ? schedule.time.split("T") : undefined
       let timHr_ = TimeExploded[1].split(":")[0]
@@ -311,27 +314,25 @@ function getCronScheduleString(schedule: any): string {
       let next_ = new Date(start_date)
       next_.setDate(next_.getDate() + 14)
       let now = new Date()
-      let timHr:number|string = now.getUTCHours()
-      let timMt:number|string = now.getUTCMinutes()
-      let dtMnt:number|string = now.getUTCMonth() + 1
-      let dtDate:number|string = now.getUTCDate()
-      timHr = timHr<10 ? `0${timHr}` : timHr
-      timMt = timMt<10 ? `0${timMt}` : timMt
-      dtMnt = dtMnt<10 ? `0${dtMnt}` : dtMnt
-      dtDate = dtDate<10 ? `0${dtDate}` : dtDate
-      console.log('timHr',timHr)
-      console.log('timMt',timMt)
-      console.log('dtMnt',dtMnt)
-      console.log('dtDate',dtDate)
+      let timHr: number | string = now.getUTCHours()
+      let timMt: number | string = now.getUTCMinutes()
+      let dtMnt: number | string = now.getUTCMonth() + 1
+      let dtDate: number | string = now.getUTCDate()
+      timHr = timHr < 10 ? `0${timHr}` : timHr
+      timMt = timMt < 10 ? `0${timMt}` : timMt
+      dtMnt = dtMnt < 10 ? `0${dtMnt}` : dtMnt
+      dtDate = dtDate < 10 ? `0${dtDate}` : dtDate
+      console.log("timHr", timHr)
+      console.log("timMt", timMt)
+      console.log("dtMnt", dtMnt)
+      console.log("dtDate", dtDate)
       let date_now = `${now.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr}:${timMt}:00.000Z`
       console.log("now", date_now)
       console.log("start_date", start_date)
       // let new_date = new Date(feedStartDateTime.setDate(feedStartDateTime.getDate() + 14));
       if (new Date(date_now) > new Date(start_date)) {
         console.log("now is greater than start date")
-        next_ = new Date(
-          `${now.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr_}:${timMt_}:00.000Z`
-        )
+        next_ = new Date(`${now.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr_}:${timMt_}:00.000Z`)
         next_.setDate(next_.getDate() + 14)
       }
       console.log("new_date///", next_)
@@ -412,6 +413,61 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
       }
       count++
     }
+  }
+}
+
+/**
+ *
+ * @param scheduler_payload
+ * @param activity_id
+ */
+async function setFortnightlySchedule(scheduler_payload: any, activity_id: string): Promise<any> {
+  //fortnightly for first time only
+  let start_date = scheduler_payload.start_date
+  let SchedulerjobResponse: any
+  console.log("fortnightly for first day -- start_date", start_date)
+  console.log("fortnightly for first day -- now", new Date())
+  if (new Date(start_date) > new Date()) {
+    console.log("scheduling fortnightly for first day", start_date)
+    try {
+      //non repeatable job
+      SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        backoff: 10000,
+        attempts: 2,
+        jobId: `${activity_id}|fortnightly|${new Date(start_date).getTime()}`,
+        delay: Math.floor(new Date(start_date).getTime() - new Date().getTime()),
+      })
+      console.log("scheduling fortnightly time", Math.floor(new Date(start_date).getTime() - new Date().getTime()))
+      const SchedulerReferenceJob = (await SchedulerReferenceQueue?.getJob(activity_id)) || null
+      //updating ShedulerReference Queue, if the activity is not saved (make activity.id as job id)
+      if (null !== SchedulerReferenceJob) {
+        if (!!SchedulerjobResponse.id) {
+          const SchedulerReferenceIds: any = SchedulerReferenceJob?.data.scheduler_ref_ids
+          const existSchedulerId = await SchedulerReferenceIds.filter((referenceId: any) =>
+            referenceId.includes(SchedulerjobResponse?.id)
+          )
+
+          if (existSchedulerId.length === 0 && undefined === existSchedulerId[0]) {
+            await SchedulerReferenceIds.push(SchedulerjobResponse?.id)
+            await SchedulerReferenceJob?.update({
+              scheduler_ref_ids: SchedulerReferenceIds,
+              activity_id: activity_id,
+            })
+          }
+        }
+      } else {
+        //add to scheduler reference queue(as we cannot make custom id for repeatable job, we need a reference of schedular jobids)
+        if (SchedulerjobResponse?.id !== undefined) {
+          await SchedulerReferenceQueue?.add(
+            { scheduler_ref_ids: [SchedulerjobResponse?.id], activity_id: activity_id },
+            { jobId: activity_id }
+          )
+        }
+      }
+      console.log("fortnightly for first day completed")
+    } catch (error) {}
   }
 }
 
@@ -608,7 +664,6 @@ export const UpdateSchedule = (topic: string, data: any) => {
   if (topic === "activity") {
     const data_ = JSON.parse(data) ?? undefined
     if (!!data_ && data_.action !== "delete") {
-      console.log("post/update", JSON.parse(data))
       //update activity schedule in cache for add/update/delete of an activity
       UpdateToSchedulerQueue?.add(
         { activity_id: data_.activity_id },
@@ -636,7 +691,6 @@ export const UpdateSchedule = (topic: string, data: any) => {
     const data_ = JSON.parse(data).data ?? undefined
     const participant_id = JSON.parse(data).participant_id ?? undefined
     console.log("participant_id listened", participant_id)
-    console.log("sensordata listened", data_)
     if (!!sensor && (sensor === "lamp.analytics" || sensor === "analytics") && undefined !== data_.device_token) {
       SchedulerDeviceUpdateQueue?.add(
         {
