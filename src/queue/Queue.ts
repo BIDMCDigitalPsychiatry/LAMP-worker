@@ -15,13 +15,22 @@ export let DeleteFromSchedulerQueue: Bull.Queue<any> | undefined
  */
 export async function initializeQueues(): Promise<void> {
   try {
-    console.log("initialize queue")
-    SchedulerQueue = new Bull("Scheduler", process.env.REDIS_HOST ?? "")
-    SchedulerReferenceQueue = new Bull("SchedulerReference", process.env.REDIS_HOST ?? "")
-    UpdateToSchedulerQueue = new Bull("UpdateToScheduler", process.env.REDIS_HOST ?? "")
-    SchedulerDeviceUpdateQueue = new Bull("SchedulerDeviceUpdate", process.env.REDIS_HOST ?? "")
-    DeleteFromSchedulerQueue = new Bull("DeleteFromScheduler", process.env.REDIS_HOST ?? "")
-
+    SchedulerQueue = new Bull("Scheduler", process.env.REDIS_HOST ?? "", {
+      redis: { enableReadyCheck: true, maxRetriesPerRequest: null },
+    })
+    SchedulerReferenceQueue = new Bull("SchedulerReference", process.env.REDIS_HOST ?? "", {
+      redis: { enableReadyCheck: true, maxRetriesPerRequest: null },
+    })
+    UpdateToSchedulerQueue = new Bull("UpdateToScheduler", process.env.REDIS_HOST ?? "", {
+      redis: { enableReadyCheck: true, maxRetriesPerRequest: null },
+    })
+    SchedulerDeviceUpdateQueue = new Bull("SchedulerDeviceUpdate", process.env.REDIS_HOST ?? "", {
+      redis: { enableReadyCheck: true, maxRetriesPerRequest: null },
+    })
+    DeleteFromSchedulerQueue = new Bull("DeleteFromScheduler", process.env.REDIS_HOST ?? "", {
+      redis: { enableReadyCheck: true, maxRetriesPerRequest: null },
+    })
+    console.log("Initialized redis queue")
     SchedulerQueue.process((job, done) => {
       SchedulerQueueProcess(job, done)
     })
