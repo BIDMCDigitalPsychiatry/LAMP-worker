@@ -47,14 +47,22 @@ async function main(): Promise<void> {
       let intervalId = setInterval(async () => {
         try {
           new Promise((resolve, reject) => {
-            RedisClient = new ioredis(             
+            RedisClient = new ioredis(         
               parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
               (process.env.REDIS_HOST as any).match(/\/\/([0-9a-zA-Z._]+)/g)?.[0]
             )
             console.log("Trying to connect redis")
-            RedisClient.on("connect", () => {
+            RedisClient.on("connect", async() => {
               console.log("Connected to redis")
-              initializeQueues()
+              await initializeQueues()
+              if (process.env.SCHEDULER === "on") {
+                console.log("Clean all queues...")
+                await cleanAllQueues()
+                console.log("Initializing schedulers...")
+                NotificationScheduling()
+              } else {
+                console.log("Running with schedulers disabled.")
+              }
               clearInterval(intervalId)
               resolve
             })
@@ -74,14 +82,7 @@ async function main(): Promise<void> {
     }
     await ServerConnect()
     await NatsConnect()    
-    if (process.env.SCHEDULER === "on") {
-      console.log("Clean all queues...")
-      await cleanAllQueues()
-      console.log("Initializing schedulers...")
-      NotificationScheduling()
-    } else {
-      console.log("Running with schedulers disabled.")
-    }
+    
     //Starting the server
     _server.listen(process.env.PORT || 3000)
     console.log(`server listening in ${process.env.PORT}`)
