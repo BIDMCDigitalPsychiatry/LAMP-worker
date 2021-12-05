@@ -195,54 +195,52 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
  */
 export const fetchLampData = async (): Promise<void> => {
   if (!!process.env.REDIS_HOST && !!SchedulerQueue) {    
-    //fetch all researchers    
-    let intervalId = setInterval(async () => { 
-      let researchers:any[]=[]
-      console.log("Fetching Researchers")      
+    //fetch all researchers
+    let intervalId = setInterval(async () => {
+      let researchers: any[] = []
+      console.log("Fetching Researchers")
       try {
         researchers = await LAMP.Researcher.all()
-        clearInterval(intervalId)
-        console.log("Connected to Lamp server API")
+        clearInterval(intervalId)        
       } catch (err) {
-        throw err   
-      }    
-    for (let researcher of researchers) {
-      let studies: any[] = []
-      try {
-        //fetch researcher based studies
-        studies = await LAMP.Study.allByResearcher(researcher.id as string)
-        if (!!process.env.AUTOMATION && process.env.AUTOMATION === "on") {
-          try {
-            LocateAutomation(researcher.id)
-          } catch (error) {
-            console.log("Encountered issue Locating automation", error)
-          }
-        }
-      } catch (error) {
-        console.log("error while fetching researcher---", error)
+        throw err
       }
-      for (let study of studies) {
-        let activities: any[] = []
+      for (let researcher of researchers) {
+        let studies: any[] = []
         try {
-          activities = await LAMP.Activity.allByStudy(study.id as string, undefined, true)
+          //fetch researcher based studies
+          studies = await LAMP.Study.allByResearcher(researcher.id as string)
+          if (!!process.env.AUTOMATION && process.env.AUTOMATION === "on") {
+            try {
+              LocateAutomation(researcher.id)
+            } catch (error) {
+              console.log("Encountered issue Locating automation", error)
+            }
+          }
         } catch (error) {
-          console.log("error while fetching activities---", error)
+          console.log("error while fetching researcher---", error)
         }
-        for (let activity of activities) {
+        for (let study of studies) {
+          let activities: any[] = []
           try {
-            //set scheduler for each activity which contain valid schedules
-            if (activity.schedule === undefined || activity?.schedule?.length === 0) continue
-            await ActivityScheduler(activity.id, study.id, [activity] as any)
+            activities = await LAMP.Activity.allByStudy(study.id as string, undefined, true)
           } catch (error) {
-            console.log("error while schedule start---", error)
+            console.log("error while fetching activities---", error)
+          }
+          for (let activity of activities) {
+            try {
+              //set scheduler for each activity which contain valid schedules
+              if (activity.schedule === undefined || activity?.schedule?.length === 0) continue
+              await ActivityScheduler(activity.id, study.id, [activity] as any)
+            } catch (error) {
+              console.log("error while schedule start---", error)
+            }
           }
         }
       }
-    }
-    console.log("scheduling completed")
-  },10000)
+      console.log("scheduling completed")
+    }, 10000)
   }
-
 }
 
 /**get the cron string
@@ -649,7 +647,7 @@ export async function removeDuplicateParticipants(participants: any): Promise<an
  *
  */
 export async function cleanAllQueues(): Promise<any> {
-  console.log("CLEANING ALL QUEUE")
+  // console.log("CLEANING ALL QUEUE")
   await SchedulerQueue?.clean(0, "delayed")
   await SchedulerQueue?.clean(0, "wait")
   await SchedulerQueue?.clean(0, "active")
