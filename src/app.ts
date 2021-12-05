@@ -82,7 +82,7 @@ async function main(): Promise<void> {
           }
         })
         RedisClient.on("error", async (err: any) => {
-          console.log("redis connection error")
+          console.log("redis connection error",err)
           RedisClient = RedisSingleton.getInstance()
         })
         RedisClient.on("disconnected", async () => {
