@@ -7,7 +7,7 @@ import { StoreAutomations, TriggerAutomations } from "./queue/Automation"
 import { initializeQueues } from "./queue/Queue"
 import LAMP from "lamp-core"
 import ioredis from "ioredis"
-let RedisClient: ioredis.Redis
+let RedisClient: ioredis.Redis | any
 let nc: Client
 const app: Application = express()
 const _server = app
@@ -38,51 +38,63 @@ export let triggers = {
   "sensor.*.participant.*": new Array(),
 } as any
 
+/**
+ * Creating singleton class for redis
+ */
+ class RedisSingleton {
+  private static instance: RedisSingleton
+  private constructor() {}
+  public static getInstance(): RedisSingleton {
+    if (RedisSingleton.instance === undefined) {
+      RedisSingleton.instance = new ioredis(
+      parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
+                (process.env.REDIS_HOST as any).match(/\/\/([0-9a-zA-Z._]+)/g)?.[0],
+      {
+        reconnectOnError() {
+          return 1
+        },
+        enableReadyCheck: true,
+      })
+    }
+    return RedisSingleton.instance
+  }
+}
+
 /**Initialize and configure the application.
  *
  */
 async function main(): Promise<void> {
   try {
     if (typeof process.env.REDIS_HOST === "string") {
-      let intervalId = setInterval(async () => {
-        try {
-          new Promise((resolve, reject) => {
-            RedisClient = new ioredis(
-              parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
-              (process.env.REDIS_HOST as any).match(/\/\/([0-9a-zA-Z._]+)/g)?.[0]
-            )
-            console.log("Trying to connect redis")
-            RedisClient.on("connect", async() => {
-              console.log("Connected to redis")                   
-              await initializeQueues()
-              if (process.env.SCHEDULER === "on") {
-                console.log("Clean all queues...")
-                await cleanAllQueues()                
-                console.log("Initializing schedulers...")
-                fetchLampData()                                
-              } else {
-                console.log("Running with schedulers disabled.")
-              }
-              clearInterval(intervalId)
-              resolve
-            })
-            RedisClient.on("error", async (err) => {
-              console.log("redis connection error",err)              
-              reject()
-            })
-            RedisClient.on("disconnected", async () => {
-              console.log(" redis disconnected")
-              reject()
-            })
-          })
-        } catch (err) {
-          console.log("Error initializing redis ", err)
-        }
-      }, 10000)
-    }    
+      console.log("Trying to connect redis")
+      RedisClient = RedisSingleton.getInstance()
+      try {
+        RedisClient.on("connect", async () => {
+          console.log("Connected to redis")
+          await initializeQueues()
+          if (process.env.SCHEDULER === "on") {
+            console.log("Clean all queues...")
+            await cleanAllQueues()
+            console.log("Initializing schedulers...")
+            fetchLampData()
+          } else {
+            console.log("Running with schedulers disabled.")
+          }
+        })
+        RedisClient.on("error", async (err: any) => {
+          console.log("redis connection error")
+          RedisClient = RedisSingleton.getInstance()
+        })
+        RedisClient.on("disconnected", async () => {
+          console.log("redis disconnected")
+          RedisClient = RedisSingleton.getInstance()
+        })
+      } catch (err) {
+        console.log("Error initializing redis", err)
+      }
+    }
     await ServerConnect()
     await NatsConnect()
-    
 
     //Starting the server
     _server.listen(process.env.PORT || 3000)
@@ -140,7 +152,7 @@ async function ServerConnect(): Promise<void> {
     const server_url = `${process.env.LAMP_SERVER}`
     const accessKey = process.env.LAMP_AUTH?.split(":")[0] as string
     const secretKey = process.env.LAMP_AUTH?.split(":")[1] as string
-    await LAMP.connect({ accessKey: accessKey, secretKey: secretKey, serverAddress: server_url })    
+    await LAMP.connect({ accessKey: accessKey, secretKey: secretKey, serverAddress: server_url })
   } catch (error) {
     console.log("Lamp server connect error", error)
     throw new error("Lamp server connection failed ")
