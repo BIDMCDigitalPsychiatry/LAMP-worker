@@ -7,6 +7,8 @@ import {
 } from "./Queue"
 import { Mutex } from "async-mutex"
 import LAMP from "lamp-core"
+import { LocateAutomation } from "./Automation"
+
 const clientLock = new Mutex()
 /// List activities for a given ID; if a Participant ID is not provided, undefined = list ALL.
 export const ActivityScheduler = async (id?: string, studyID?: string, items?: any[]): Promise<void> => {
@@ -191,15 +193,31 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
 /**store schedules for valid study based activities
  *
  */
-export const NotificationScheduling = async (): Promise<void> => {
-  if (!!process.env.REDIS_HOST && !!SchedulerQueue) {
-    //fetch all researchers
-    const researchers = await LAMP.Researcher.all()
+export const fetchLampData = async (): Promise<void> => {
+  if (!!process.env.REDIS_HOST && !!SchedulerQueue) {    
+    //fetch all researchers    
+    let intervalId = setInterval(async () => { 
+      let researchers:any[]=[]
+      console.log("Fetching Researchers")      
+      try {
+        researchers = await LAMP.Researcher.all()
+        clearInterval(intervalId)
+        console.log("Connected to Lamp server API")
+      } catch (err) {
+        throw err   
+      }    
     for (let researcher of researchers) {
       let studies: any[] = []
       try {
         //fetch researcher based studies
         studies = await LAMP.Study.allByResearcher(researcher.id as string)
+        if (!!process.env.AUTOMATION && process.env.AUTOMATION === "on") {
+          try {
+            LocateAutomation(researcher.id)
+          } catch (error) {
+            console.log("Encountered issue Locating automation", error)
+          }
+        }
       } catch (error) {
         console.log("error while fetching researcher---", error)
       }
@@ -222,7 +240,9 @@ export const NotificationScheduling = async (): Promise<void> => {
       }
     }
     console.log("scheduling completed")
+  },10000)
   }
+
 }
 
 /**get the cron string
