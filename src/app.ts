@@ -2,12 +2,12 @@ require("dotenv").config()
 import express, { Application, Router, Request, Response } from "express"
 import { connect, NatsConnectionOptions, Payload, Client } from "ts-nats"
 import _Docker from "dockerode"
-import { NotificationScheduling, cleanAllQueues, UpdateSchedule } from "./queue/ActivitySchedulerJob"
-import { StoreAutomations, TriggerAutomations, LocateAutomation } from "./queue/Automation"
+import { fetchLampData, cleanAllQueues, UpdateSchedule } from "./queue/ActivitySchedulerJob"
+import { StoreAutomations, TriggerAutomations } from "./queue/Automation"
 import { initializeQueues } from "./queue/Queue"
 import LAMP from "lamp-core"
 import ioredis from "ioredis"
-let RedisClient: ioredis.Redis
+let RedisClient: ioredis.Redis | any
 let nc: Client
 const app: Application = express()
 const _server = app
@@ -38,69 +38,69 @@ export let triggers = {
   "sensor.*.participant.*": new Array(),
 } as any
 
+/**
+ * Creating singleton class for redis
+ */
+ class RedisSingleton {
+  private static instance: RedisSingleton
+  private constructor() {}
+  public static getInstance(): RedisSingleton {
+    if (RedisSingleton.instance === undefined) {
+      RedisSingleton.instance = new ioredis(
+      parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
+                (process.env.REDIS_HOST as any).match(/\/\/([0-9a-zA-Z._]+)/g)?.[0],
+      {
+        reconnectOnError() {
+          return 1
+        },
+        enableReadyCheck: true,
+      })
+    }
+    return RedisSingleton.instance
+  }
+}
+
 /**Initialize and configure the application.
  *
  */
 async function main(): Promise<void> {
   try {
     if (typeof process.env.REDIS_HOST === "string") {
-      let intervalId = setInterval(async () => {
-        try {
-          new Promise((resolve, reject) => {
-            RedisClient = new ioredis(         
-              parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
-              (process.env.REDIS_HOST as any).match(/\/\/([0-9a-zA-Z._]+)/g)?.[0]
-            )
-            console.log("Trying to connect redis")
-            RedisClient.on("connect", async() => {
-              console.log("Connected to redis")
-              await initializeQueues()
-              if (process.env.SCHEDULER === "on") {
-                console.log("Clean all queues...")
-                await cleanAllQueues()
-                console.log("Initializing schedulers...")
-                NotificationScheduling()
-              } else {
-                console.log("Running with schedulers disabled.")
-              }
-              clearInterval(intervalId)
-              resolve
-            })
-            RedisClient.on("error", async () => {
-              console.log("redis connection error")              
-              reject()
-            })
-            RedisClient.on("disconnected", async () => {
-              console.log(" redis disconnected")
-              reject()
-            })
-          })
-        } catch (err) {
-          console.log("Error initializing redis ", err)
-        }
-      }, 10000)
+      console.log("Trying to connect redis")
+      RedisClient = RedisSingleton.getInstance()
+      try {
+        RedisClient.on("connect", async () => {
+          console.log("Connected to redis")
+          await initializeQueues()
+          if (process.env.SCHEDULER === "on") {
+            console.log("Clean all queues...")
+            await cleanAllQueues()
+            console.log("Initializing schedulers...")
+            fetchLampData()
+          } else {
+            console.log("Running with schedulers disabled.")
+          }
+        })
+        RedisClient.on("error", async (err: any) => {
+          console.log("redis connection error",err)
+          RedisClient = RedisSingleton.getInstance()
+        })
+        RedisClient.on("disconnected", async () => {
+          console.log("redis disconnected")
+          RedisClient = RedisSingleton.getInstance()
+        })
+      } catch (err) {
+        console.log("Error initializing redis", err)
+      }
     }
     await ServerConnect()
-    await NatsConnect()    
-    
+    await NatsConnect()
+
     //Starting the server
     _server.listen(process.env.PORT || 3000)
     console.log(`server listening in ${process.env.PORT}`)
   } catch (error) {
     console.log("Encountered issue while starting LAMP-worker", error)
-  }
-  if (!!process.env.AUTOMATION && process.env.AUTOMATION === "on") {
-    console.log("Locating automations...")
-    const researchers = (await LAMP.Researcher.all()) as any
-    for (let researcher of researchers) {
-      try {
-        LocateAutomation(researcher.id)
-      } catch (error) {
-        console.log("Encountered issue Locating automation", error)
-      }
-    }
-  } else {
-    console.log("Running with automation disabled.")
   }
 }
 
