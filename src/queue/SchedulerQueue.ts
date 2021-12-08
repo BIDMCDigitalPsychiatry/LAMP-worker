@@ -96,8 +96,8 @@ export function sendNotification(device_token: string, device_type: string, payl
             payload: {
               priority: "high",
               data: {
-                title: `${payload.title}`,
-                message: `${payload.message}`,
+                title: `${payload.title}.`,
+                message: `${payload.message}.`,
                 page: `${url}`,
                 notificationId: notificationId,
                 actions: [{ name: "Open App", page: `${url}` }],
@@ -133,7 +133,7 @@ export function sendNotification(device_token: string, device_type: string, payl
             device_token: device_token,
             payload: {
               aps: {
-                alert: `${payload.message}`,
+                alert: `${payload.message}.`,
                 badge: 0,
                 sound: "default",
                 "mutable-content": 1,
@@ -178,7 +178,7 @@ export function sendNotification(device_token: string, device_type: string, payl
             device_token: device_token,
             payload: {
               aps: {
-                alert: `${payload.message}`,
+                alert: `${payload.message}.`,
                 badge: 0,
                 sound: "default",
                 "mutable-content": 1,
