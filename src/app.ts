@@ -7,8 +7,9 @@ import { StoreAutomations, TriggerAutomations } from "./queue/Automation"
 import { initializeQueues } from "./queue/Queue"
 import LAMP from "lamp-core"
 import ioredis from "ioredis"
-let RedisClient: ioredis.Redis | any
+let RedisClient: ioredis.Redis
 let nc: Client
+
 const app: Application = express()
 const _server = app
 
@@ -40,14 +41,18 @@ export let triggers = {
 
 /**
  * Creating singleton class for redis
- */
- class RedisSingleton {
-  private static instance: RedisSingleton
+*/
+export class RedisFactory {
+  private static instance: ioredis.Redis
   private constructor() {}
-  public static getInstance(): RedisSingleton {
-    if (RedisSingleton.instance === undefined) {
-      RedisSingleton.instance = new ioredis(
-      parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
+  
+  /**
+   * @returns redis client instance
+  */
+  public static getInstance(): ioredis.Redis {
+    if (this.instance === undefined) {      
+      this.instance = new ioredis(
+                parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
                 (process.env.REDIS_HOST as any).match(/\/\/([0-9a-zA-Z._]+)/g)?.[0],
       {
         reconnectOnError() {
@@ -56,7 +61,7 @@ export let triggers = {
         enableReadyCheck: true,
       })
     }
-    return RedisSingleton.instance
+    return this.instance
   }
 }
 
@@ -67,7 +72,7 @@ async function main(): Promise<void> {
   try {
     if (typeof process.env.REDIS_HOST === "string") {
       console.log("Trying to connect redis")
-      RedisClient = RedisSingleton.getInstance()
+      RedisClient = RedisFactory.getInstance()
       try {
         RedisClient.on("connect", async () => {
           console.log("Connected to redis")
@@ -83,11 +88,11 @@ async function main(): Promise<void> {
         })
         RedisClient.on("error", async (err: any) => {
           console.log("redis connection error",err)
-          RedisClient = RedisSingleton.getInstance()
+          RedisClient = RedisFactory.getInstance()
         })
         RedisClient.on("disconnected", async () => {
           console.log("redis disconnected")
-          RedisClient = RedisSingleton.getInstance()
+          RedisClient = RedisFactory.getInstance()
         })
       } catch (err) {
         console.log("Error initializing redis", err)
@@ -123,7 +128,7 @@ async function NatsConnect() {
     } catch (error) {
       console.log("Error in Connecting to nats sub server")
     }
-  }, 10000)
+  }, 3000)
 }
 
 /**
