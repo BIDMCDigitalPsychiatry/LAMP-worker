@@ -69,7 +69,9 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
           if (event_data.length === 0) continue
           const filteredArray: any = await event_data.filter(
             (x: any) =>
-              x.data.type === undefined && x.data.action !== "notification" && x.data.device_type !== "Dashboard"
+              x.data.type === undefined 
+              && (x.data.action === "login" || x.data.action === "logout")
+              && x.data.device_type !== "Dashboard"
           )
           if (filteredArray.length === 0) continue
           const events: any = filteredArray[0]
