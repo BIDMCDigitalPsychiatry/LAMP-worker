@@ -77,17 +77,17 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
           const events: any = filteredArray[0]
           const device = undefined !== events && undefined !== events.data ? events.data : undefined
           if (device === undefined || device.device_token === undefined) continue
-
-          let timezone: any = {}
-          try {
-            timezone = await LAMP.Type.getAttachment(participant.id, "lamp.participant.timezone")
-          } catch (error) {
-            console.log("LocateTimezone", error)
-          }
-          const timezone_ = (!!timezone?.data) ? timezone?.data : process.env.TIMEZONE 
-
+                 
           //take Device_Tokens and ParticipantIDs
           if (participant.id && device.device_token && device.device_type) {
+            let timezone: any = {}   
+            try {
+              timezone = await LAMP.Type.getAttachment(participant.id, "lamp.participant.timezone")
+            } catch (error) {
+              console.log("LocateTimezone", error)
+            }
+            const timezone_ = (!!timezone?.data) ? timezone?.data : null
+  
             Participants.unshift({
               participant_id: participant.id,
               device_token: device.device_token,
@@ -153,6 +153,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
   console.log("Saving to Redis completed....")
   release()
   console.log(`release lock  on success  activity_scheduler`)
+  console.log("REPETABLE JOBS",await SchedulerQueue?.getRepeatableJobs())
 }
 
 /**store schedules for valid study based activities
@@ -575,6 +576,7 @@ export const UpdateSchedule = (topic: string, data: any) => {
  */
 async function PrepareSchedules(scheduler_payload: any) {
   try {
+    
     let timezones: any[] = []
     let newSchedules: any = {}
     let Participants_ = scheduler_payload.participants
@@ -605,7 +607,7 @@ async function PrepareSchedules(scheduler_payload: any) {
         //set delayed job for present day in fortnightly type
         await createDelayedJobs(
           newSchedules[timezone],
-          `${newSchedules[timezone].activity_id}|fortnightly|${timezone.split("/").join("_")}`
+          `${newSchedules[timezone].activity_id}|fortnightly|${!!timezone?timezone.split("/").join("_"):null}`
         )
         newSchedules[timezone].cronStr = getCronStringForFortnightly(newSchedules[timezone])
       }
@@ -614,18 +616,17 @@ async function PrepareSchedules(scheduler_payload: any) {
         try {
           await createRepeatableJobs(
             newSchedules[timezone],
-            `${newSchedules[timezone].activity_id}|${newSchedules[timezone].timezone.split("/").join("_")}`
+            `${newSchedules[timezone].activity_id}|${!!timezone?timezone.split("/").join("_"):null}`
           )
         } catch (error) {
           console.log("Schedule error on  repeated", error)
         }
       } else {
         try {
-          //set delayed job for none type
-          newSchedules[timezone].start_date = undefined
+          //set delayed job for none type          
           await createDelayedJobs(
             newSchedules[timezone],
-            `${newSchedules[timezone].activity_id}|none|${timezone.split("/").join("_")}`
+            `${newSchedules[timezone].activity_id}|none|${!!timezone?timezone.split("/").join("_"):null}`
           )
         } catch (error) {
           console.log("Schedule error on delayed", error)
@@ -674,12 +675,13 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
  * @param scheduler_payload
  * @param activity_id
  */
-async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise<any> {
+async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise<any> { 
   let now = getCurrentTime(scheduler_payload.timezone)
   let start_date = scheduler_payload.start_date
   let SchedulerjobResponse: any
   if (new Date(start_date) > new Date(now)) {
-    try {
+      try {
+      scheduler_payload.start_date = undefined
       //non repeatable job
       SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
         removeOnComplete: true,
@@ -727,7 +729,7 @@ async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise
  * @param jobId
  */
 async function createRepeatableJobs(scheduler_payload: any, jobId: string): Promise<any> {
-  try {
+  try {    
     let SchedulerjobResponse: any
     if (!!scheduler_payload.cronStr)
       // repeatable job - daily,biweekly,hourly,monthly etc
@@ -778,9 +780,19 @@ async function createRepeatableJobs(scheduler_payload: any, jobId: string): Prom
  * @param timezone
  * @returns
  */
-export function getCurrentTime(timezone?: string): string {
-  let now = new Date().toString()
-  if (!!timezone) {
+export function getCurrentTime(timezone?: string): string {  
+  let now_ = new Date()
+  let timHr: number | string = now_.getUTCHours()
+  let timMt: number | string = now_.getUTCMinutes()
+  let dtMnt: number | string = now_.getUTCMonth() + 1
+  let dtDate: number | string = now_.getUTCDate()
+  timHr = timHr < 10 ? `0${timHr}` : timHr
+  timMt = timMt < 10 ? `0${timMt}` : timMt
+  dtMnt = dtMnt < 10 ? `0${dtMnt}` : dtMnt
+  dtDate = dtDate < 10 ? `0${dtDate}` : dtDate 
+  let now  = `${now_.getUTCFullYear()}-${dtMnt}-${dtDate}T${timHr}:${timMt}:00.000Z`
+  
+  if (!!timezone) {    
     let d = new Date()
     let tm = d.toLocaleString("en-GB", { timeZone: timezone })
     let dat = tm.split(",")[0]
@@ -796,7 +808,7 @@ export function getCurrentTime(timezone?: string): string {
     if (dtDate < 9) dtDate = `0${dtDate}`
     if (timHr < 9) timHr = `0${timHr}`
     if (timMt < 9) timMt = `0${timMt}`
-    now = `${dtYr}-${dtMnth}-${dtDate}T${timHr}:${timMt}:${timSc}.${timMs}Z`
-  }
+    now = `${dtYr}-${dtMnth}-${dtDate}T${timHr}:${timMt}:${timSc}.${timMs}Z`    
+  }   
   return now
 }
