@@ -86,7 +86,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             } catch (error) {
               console.log("LocateTimezone", error)
             }
-            const timezone_ = (!!timezone?.data) ? timezone?.data : null
+            const timezone_ = (!!timezone?.data) ? timezone?.data : (!!process.env.TIMEZONE ? process.env.TIMEZONE:null)
   
             Participants.unshift({
               participant_id: participant.id,
@@ -153,7 +153,6 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
   console.log("Saving to Redis completed....")
   release()
   console.log(`release lock  on success  activity_scheduler`)
-  console.log("REPETABLE JOBS",await SchedulerQueue?.getRepeatableJobs())
 }
 
 /**store schedules for valid study based activities
@@ -576,7 +575,6 @@ export const UpdateSchedule = (topic: string, data: any) => {
  */
 async function PrepareSchedules(scheduler_payload: any) {
   try {
-    
     let timezones: any[] = []
     let newSchedules: any = {}
     let Participants_ = scheduler_payload.participants
