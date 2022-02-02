@@ -87,7 +87,8 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
               console.log("LocateTimezone", error)
             }
             const timezone_ = !!timezone?.data ? timezone?.data : !!process.env.TIMEZONE ? process.env.TIMEZONE : null
-
+            console.log("participantID",participant.id) 
+            console.log("timezone_",timezone_) 
             Participants.unshift({
               participant_id: participant.id,
               device_token: device.device_token,

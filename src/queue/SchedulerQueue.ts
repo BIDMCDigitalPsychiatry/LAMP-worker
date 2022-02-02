@@ -1,6 +1,6 @@
 import Bull from "bull"
 import fetch from "node-fetch"
-import { ActivityScheduler, removeDuplicateParticipants } from "./ActivitySchedulerJob"
+import { ActivityScheduler, removeDuplicateParticipants, getCurrentTime } from "./ActivitySchedulerJob"
 import { Mutex } from "async-mutex"
 const clientLock = new Mutex()
 
@@ -11,26 +11,29 @@ const clientLock = new Mutex()
  */
 export async function SchedulerQueueProcess(job: Bull.Job<any>, done: Bull.DoneCallback): Promise<void> {
   const data: any = job.data
-  try { 
+  try {     
+    console.log("data while notifying",data)  
     let start_notify=true
-    if(data.start_date !== undefined) {
-      let today = new Date().toString()
+    if(data.start_date !== undefined ) {      
+      let today = getCurrentTime(data.timezone)
       let TimeExploded = today.split('T')
       let timHr = TimeExploded[1].split(':')[0]
       let timMt = TimeExploded[1].split(':')[1]
       let today_date = new Date(`${TimeExploded[0]}T${timHr}:${timMt}:00.000Z`)
-      let start_date = new Date(data.start_date)
-      console.log("today_date while notify",today_date)
-      console.log("start_date while notify",start_date)
+      let start_date = new Date(data.start_date) 
+      console.log("start_date while notifiy",start_date)
+      console.log("today_date while notifiy",today_date)       
       if(start_date > today_date)
        start_notify=false
-    }
+    }  
+    console.log("start_notify",start_notify)  
     if (start_notify) {
-      const uniqueParticipants = await removeDuplicateParticipants(data.participants)
+       const uniqueParticipants = await removeDuplicateParticipants(data.participants)
       for (const device of uniqueParticipants) {
         const device_type = device.device_type
         const device_token = device.device_token
         const participant_id = device.participant_id
+        console.log("notified",participant_id)          
         if (undefined !== device_token && undefined !== device_type && undefined !== participant_id) {
           sendNotification(device_token, device_type, {
             participant_id: participant_id,
@@ -66,7 +69,9 @@ export async function SchedulerQueueOnCompleted(job: Bull.Job<any>): Promise<voi
 
 /// Send to device with payload and device token given.
 export function sendNotification(device_token: string, device_type: string, payload: any): void {
-  console.dir({ device_token, device_type, payload })
+  let nw = new Date()
+  
+  console.dir({ nw, device_token, device_type, payload })
   // Send this specific page URL to the device to show the actual activity.
   // eslint-disable-next-line prettier/prettier
   const url = payload.url
@@ -76,8 +81,7 @@ export function sendNotification(device_token: string, device_type: string, payl
     : `${process.env.PUSH_GATEWAY}`
   const gatewayApiKey: any = !!process.env.PUSH_API_KEY
     ? `${process.env.PUSH_API_KEY}`
-    : `${process.env.PUSH_GATEWAY_APIKEY}`
-  console.log(url)
+    : `${process.env.PUSH_GATEWAY_APIKEY}`  
   try {
     if ("undefined" === gatewayURL) {
       throw new Error("Push gateway address is not defined")
