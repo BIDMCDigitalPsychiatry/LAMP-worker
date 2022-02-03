@@ -12,10 +12,12 @@ const clientLock = new Mutex()
 export async function SchedulerQueueProcess(job: Bull.Job<any>, done: Bull.DoneCallback): Promise<void> {
   const data: any = job.data
   try {     
-    console.log("data while notifying",data)  
+    console.log("data while notifying tiemzone",data.timezone)  
+    console.log("data while notifying participants",data.participants)  
     let start_notify=true
     if(data.start_date !== undefined ) {      
       let today = getCurrentTime(data.timezone)
+      console.log("FOUND today AS",today)
       let TimeExploded = today.split('T')
       let timHr = TimeExploded[1].split(':')[0]
       let timMt = TimeExploded[1].split(':')[1]
