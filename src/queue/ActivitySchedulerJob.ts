@@ -86,9 +86,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             } catch (error) {
               console.log("LocateTimezone", error)
             }
-            const timezone_ = !!timezone?.data ? timezone?.data : !!process.env.TIMEZONE ? process.env.TIMEZONE : null
-            console.log("participantID",participant.id) 
-            console.log("timezone_",timezone_) 
+            const timezone_ = !!timezone?.data ? timezone?.data : !!process.env.TIMEZONE ? process.env.TIMEZONE : null            
             Participants.unshift({
               participant_id: participant.id,
               device_token: device.device_token,
@@ -547,8 +545,7 @@ export const UpdateSchedule = (topic: string, data: any) => {
   } else if (topic === "sensor_event") {
     const sensor = JSON.parse(data).sensor ?? undefined
     const data_ = JSON.parse(data).data ?? undefined
-    const participant_id = JSON.parse(data).participant_id ?? undefined
-    console.log("participant_id listened", participant_id)
+    const participant_id = JSON.parse(data).participant_id ?? undefined    
     if (!!sensor && (sensor === "lamp.analytics" || sensor === "analytics") && undefined !== data_.device_token) {
       SchedulerDeviceUpdateQueue?.add(
         {
@@ -674,8 +671,9 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
  * @param scheduler_payload
  * @param activity_id
  */
-async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise<any> {
-  console.log("scheduler_payload Delayed", scheduler_payload)
+async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise<any> {  
+  console.log("scheduler_payload Delayed", scheduler_payload.timezone)
+    console.log("scheduler_payload Delayed", scheduler_payload.cronStr)
   let now = getCurrentTime(scheduler_payload.timezone)
   let start_date = scheduler_payload.start_date
   let SchedulerjobResponse: any
@@ -730,7 +728,9 @@ async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise
  */
 async function createRepeatableJobs(scheduler_payload: any, jobId: string): Promise<any> {
   try {
-    console.log("scheduler_payload Repeated", scheduler_payload)
+    console.log("scheduler_payload Repeated", scheduler_payload.timezone)
+    console.log("scheduler_payload Repeated", scheduler_payload.cronStr)
+
     let SchedulerjobResponse: any
     if (!!scheduler_payload.cronStr)
       // repeatable job - daily,biweekly,hourly,monthly etc
