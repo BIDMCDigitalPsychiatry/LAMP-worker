@@ -10,7 +10,13 @@ import LAMP from "lamp-core"
 import { LocateAutomation } from "./Automation"
 
 const clientLock = new Mutex()
-/// List activities for a given ID; if a Participant ID is not provided, undefined = list ALL.
+
+/**
+ * Schedule activities
+ * @param id 
+ * @param studyID 
+ * @param items 
+ */
 export const ActivityScheduler = async (id?: string, studyID?: string, items?: any[]): Promise<void> => {
   console.log("Preparing to fetch activities")
   let activities: any[] = []
@@ -86,7 +92,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
             } catch (error) {
               console.log("LocateTimezone", error)
             }
-            const timezone_ = !!timezone?.data ? timezone?.data : !!process.env.TIMEZONE ? process.env.TIMEZONE : null            
+            const timezone_ = !!timezone?.data ? timezone?.data : !!process.env.TIMEZONE ? process.env.TIMEZONE : null
             Participants.unshift({
               participant_id: participant.id,
               device_token: device.device_token,
@@ -151,7 +157,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
   }
   console.log("Saving to Redis completed....")
   release()
-  console.log(`release lock  on success  activity_scheduler`)
+  console.log(`release lock  on success  activity_scheduler`)  
 }
 
 /**store schedules for valid study based activities
@@ -375,41 +381,61 @@ async function removeRepeatableJob(activity_id: string): Promise<void> {
  */
 export async function updateDeviceDetails(activityIDs: any, device_details: any): Promise<void> {
   //form the device detail to be saved
-  const Device =
+  let Device: any =
     device_details.device_token !== undefined
       ? {
           participant_id: device_details.participant_id,
           device_token: device_details.device_token,
           device_type: device_details.device_type.toLowerCase(),
+          timezone: undefined,
         }
       : undefined
   //Initialise array to store scheduler details to be updated
   const SheduleToUpdate: any = []
-
+  let timezone: any = {}
+  try {
+    timezone = await LAMP.Type.getAttachment(device_details.participant_id, "lamp.participant.timezone")
+  } catch (error) {
+    console.log("LocateTimezone--", error)
+  }
+  const timezone_ = !!timezone?.data ? timezone?.data : !!process.env.TIMEZONE ? process.env.TIMEZONE : null
+  Device.timezone = timezone_
+  let newTimeZones: any[] = []
   //get the schedulerIds for each activity_id, if present
   for (const activityID of activityIDs) {
     const SchedulerReferenceJobs: any = (await SchedulerReferenceQueue?.getJob(activityID)) || null
-
     if (null !== SchedulerReferenceJobs) {
       //take sheduler ids to find scheduler job
       for (const shedulerId of SchedulerReferenceJobs.data.scheduler_ref_ids) {
-        try {
+        try {          
           //get job details from Sheduler
-          const SchedulerJob = (await SchedulerQueue?.getJob(shedulerId)) || null
+          const SchedulerJob: any = (await SchedulerQueue?.getJob(shedulerId)) || null
           if (null !== SchedulerJob) {
             //get the participants for an scheduler id in an array
-            const participants: any = SchedulerJob?.data.participants
-
+            const participants: any = SchedulerJob?.data.participants            
+            newTimeZones.push({ timezone: participants[0].timezone, activity_id: SchedulerJob?.data.activity_id })
             if (undefined !== participants) {
               const participantID = await participants.filter((participant: any) =>
                 participant.participant_id.includes(device_details.participant_id)
-              )
-
-              if (undefined !== participantID) {
-                SheduleToUpdate.push({
-                  index: participants.indexOf(participantID[0]),
-                  shedulerId: shedulerId,
-                })
+              )              
+              if (undefined !== participantID) {                
+                if (participantID.length) {                  
+                  SheduleToUpdate.push({
+                    index: participants.indexOf(participantID[0]),
+                    shedulerId: shedulerId,
+                    timezone: participants[0].timezone,
+                    activity_id: activityID,
+                  })
+                } else {                  
+                  if (Device.timezone === participants[0].timezone) {
+                    SheduleToUpdate.push({
+                      index: participants.indexOf(participantID[0]),
+                      shedulerId: shedulerId,
+                      timezone: participants[0].timezone,
+                      activity_id: activityID,
+                    })
+                  }
+                }
               }
             }
           }
@@ -423,38 +449,80 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
         await ActivityScheduler(activityID)
       }
     }
-  }
-
+  }  
   //update device details of a participant
   for (const updateDetail of SheduleToUpdate) {
     try {
-      const SchedulerJob = (await SchedulerQueue?.getJob(updateDetail.shedulerId)) || null
+      const SchedulerJob: any = (await SchedulerQueue?.getJob(updateDetail.shedulerId)) || null
       if (null != SchedulerJob) {
-        const newParticipants: any = await SchedulerJob?.data.participants
-
+        let newParticipants: any = await SchedulerJob?.data.participants        
         //remove the participant with old device details
         if (-1 !== updateDetail.index) {
           await newParticipants.splice(updateDetail.index, 1)
         }
-        //mode =1-add sensor_event, mode=2-delete sensor_event
-        if (device_details.mode === 1) {
+        //mode =1-add sensor_event, mode=2-delete sensor_event, also check for timezone whether its same or not
+        if (device_details.mode === 1 && Device.timezone === updateDetail.timezone) {
           await newParticipants.unshift(Device)
-        }
-
+        }        
         //Prepare scheduler data
         const data = {
           title: SchedulerJob?.data.title,
           message: SchedulerJob?.data.message,
           activity_id: SchedulerJob?.data.activity_id,
+          timezone: SchedulerJob?.data.timezone,
           participants: await removeDuplicateParticipants(newParticipants),
           notificationIds: SchedulerJob?.data.notificationIds ?? undefined,
         }
 
         //update scheduler with new participant
-        await SchedulerJob?.update(data)
+        if (newParticipants.length !== 0) {          
+          await SchedulerJob?.update(data)
+        } else {          
+          try {
+            let repeatId = SchedulerJob?.opts?.repeat?.jobId
+            if (!!repeatId) {
+              if (repeatId.includes("fortnightly")) {                
+                await removeRepeatableJob(`${SchedulerJob?.data.activity_id}|fortnightly|${updateDetail.timezone}`)
+              } else {                
+                await removeRepeatableJob(`${SchedulerJob?.data.activity_id}|${updateDetail.timezone}`)
+              }
+            }
+            await SchedulerJob?.remove()
+            const SchedulerReferenceJob = await SchedulerReferenceQueue?.getJob(updateDetail.activity_id)
+            const SchedulerReferenceIds: any = SchedulerReferenceJob?.data.scheduler_ref_ids
+            const existSchedulerId = await SchedulerReferenceIds.filter((referenceId: any) =>
+              referenceId.includes(updateDetail.shedulerId)
+            )
+            if (existSchedulerId.length !== 0) {
+              let index = await SchedulerReferenceIds.indexOf(updateDetail.shedulerId)
+              SchedulerReferenceIds.splice(index, 1)
+              await SchedulerReferenceJob?.update({
+                scheduler_ref_ids: SchedulerReferenceIds,
+                activity_id: SchedulerJob?.data.activity_id,
+              })
+            }
+          } catch (error) {}
+        }
       }
     } catch (error) {
       console.log(`"error updating device in job2-${error}"`)
+    }
+  }
+  const TimeZone = newTimeZones.filter((zones: any) => zones.timezone.includes(Device.timezone))
+  //If the timezone is new for the activity, create it as new schedule
+  if (!!TimeZone && !TimeZone.length) {
+    for (const newTimeZone of newTimeZones) {      
+      if (!!newTimeZone.activity_id) {
+        const release = await clientLock.acquire()
+        try {
+          RescheduleForParticipant(newTimeZone.activity_id, Device)
+        } catch (error) {
+          console.log("lock on reschedule error", error)
+          release()
+        }
+        console.log("lock on reschedule released success")
+        release()
+      }
     }
   }
 }
@@ -511,9 +579,9 @@ export async function cleanAllQueues(): Promise<any> {
   console.log("DONE--CLEANING ALL QUEUE")
 }
 
-/**check for the presence of activity in the  topic published to get scheduled
+/**check for the presence of activity in the  topic published
  *
- * @param token
+ * @param topic
  * @param data
  */
 export const UpdateSchedule = (topic: string, data: any) => {
@@ -545,7 +613,7 @@ export const UpdateSchedule = (topic: string, data: any) => {
   } else if (topic === "sensor_event") {
     const sensor = JSON.parse(data).sensor ?? undefined
     const data_ = JSON.parse(data).data ?? undefined
-    const participant_id = JSON.parse(data).participant_id ?? undefined    
+    const participant_id = JSON.parse(data).participant_id ?? undefined
     if (!!sensor && (sensor === "lamp.analytics" || sensor === "analytics") && undefined !== data_.device_token) {
       SchedulerDeviceUpdateQueue?.add(
         {
@@ -563,6 +631,10 @@ export const UpdateSchedule = (topic: string, data: any) => {
         { device_type: undefined, device_token: undefined, participant_id: participant_id, mode: 2 },
         { attempts: 3, backoff: 10000, removeOnComplete: true, removeOnFail: true }
       )
+    }
+  } else {
+    if (topic === "lamp.participant.timezone") {
+      //find device details and
     }
   }
 }
@@ -603,7 +675,7 @@ async function PrepareSchedules(scheduler_payload: any) {
         //set delayed job for present day in fortnightly type
         await createDelayedJobs(
           newSchedules[timezone],
-          `${newSchedules[timezone].activity_id}|fortnightly|${!!timezone ? timezone.split("/").join("_") : null}`
+          `${newSchedules[timezone].activity_id}|fortnightly|${!!timezone ? timezone : null}`
         )
         newSchedules[timezone].cronStr = getCronStringForFortnightly(newSchedules[timezone])
       }
@@ -612,7 +684,9 @@ async function PrepareSchedules(scheduler_payload: any) {
         try {
           await createRepeatableJobs(
             newSchedules[timezone],
-            `${newSchedules[timezone].activity_id}|${!!timezone ? timezone.split("/").join("_") : null}`
+            scheduler_payload.repeat_interval !== "fortnightly"
+              ? `${newSchedules[timezone].activity_id}|${!!timezone ? timezone : null}`
+              : `${newSchedules[timezone].activity_id}|fortnightly|${!!timezone ? timezone : null}`
           )
         } catch (error) {
           console.log("Schedule error on  repeated", error)
@@ -622,7 +696,7 @@ async function PrepareSchedules(scheduler_payload: any) {
           //set delayed job for none type
           await createDelayedJobs(
             newSchedules[timezone],
-            `${newSchedules[timezone].activity_id}|none|${!!timezone ? timezone.split("/").join("_") : null}`
+            `${newSchedules[timezone].activity_id}|none|${!!timezone ? timezone : null}`
           )
         } catch (error) {
           console.log("Schedule error on delayed", error)
@@ -666,20 +740,20 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
   }
 }
 
-/** Create delayed jobs- (none,fortnightly included)
+/** Create delayed jobs- (none,fortnightly for first day)
  *
  * @param scheduler_payload
  * @param activity_id
  */
-async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise<any> {  
+async function createDelayedJobs(scheduler_payload: any, jobId: string): Promise<any> {
   console.log("scheduler_payload Delayed", scheduler_payload.timezone)
-    console.log("scheduler_payload Delayed", scheduler_payload.cronStr)
+  console.log("scheduler_payload Delayed", scheduler_payload.cronStr)
   let now = getCurrentTime(scheduler_payload.timezone)
   let start_date = scheduler_payload.start_date
   let SchedulerjobResponse: any
   if (new Date(start_date) > new Date(now)) {
     try {
-      scheduler_payload.start_date = undefined
+      scheduler_payload = { ...scheduler_payload, start_date: undefined }
       //non repeatable job
       SchedulerjobResponse = await SchedulerQueue?.add(scheduler_payload, {
         removeOnComplete: true,
@@ -812,4 +886,57 @@ export function getCurrentTime(timezone?: string): string {
     now = `${dtYr}-${dtMnth}-${dtDate}T${timHr}:${timMt}:${timSc}.${timMs}Z`
   }
   return now
+}
+
+/** Reschedule for a participant given
+ *
+ * @param activity_id
+ * @param Device
+ */
+async function RescheduleForParticipant(activity_id: string, Device: any) {
+  let Participants = Array.isArray(Device) ? Device : [Device]
+  let activities: any[] = [(await LAMP.Activity.view(activity_id as any, undefined, true)) as any]
+  for (const activity of activities) {
+    for (const schedule of activity.schedule) {
+      try {
+        if (schedule.time === "1970-01-01T12:48:00.000Z" || schedule.start_date === "1970-01-01T12:48:00.000Z") continue
+        const cronStr =
+          schedule.repeat_interval !== "none" && schedule.repeat_interval !== "fortnightly"
+            ? await getCronScheduleString(schedule)
+            : ""
+        let startDateExploded = schedule.start_date ? schedule.start_date.split("T") : undefined
+        let TimeExploded = schedule.time ? schedule.time.split("T") : undefined
+        let timHr = TimeExploded[1].split(":")[0]
+        let timMt = TimeExploded[1].split(":")[1]
+        let start_date = `${startDateExploded[0]}T${timHr}:${timMt}:00.000Z`
+        if (schedule.repeat_interval !== "custom") {
+          const notification_id = !!schedule.notification_ids ? schedule.notification_ids[0] : undefined
+          const scheduler_payload: any = {
+            title: activity.name,
+            start_date: start_date,
+            message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
+            activity_id: activity.id,
+            participants: Participants,
+            notificationIds: notification_id,
+            repeat_interval: schedule.repeat_interval,
+            cronStr: cronStr,
+          }
+          await PrepareSchedules(scheduler_payload)
+        } else {
+          const notification_id = !!schedule.notification_ids ? schedule.notification_ids : undefined
+          //As the custom time might appear as multiple, process it seperately
+          const activity_details: {} = {
+            name: activity.name,
+            activity_id: activity.id,
+            cronStr: cronStr,
+            notificationIds: notification_id,
+            start_date: start_date,
+          }
+          await setCustomSchedule(activity_details, Participants)
+        }
+      } catch (error) {
+        console.log("reschedule error", error)
+      }
+    }
+  }
 }
