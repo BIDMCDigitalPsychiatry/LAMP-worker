@@ -13,9 +13,9 @@ const clientLock = new Mutex()
 
 /**
  * Schedule activities
- * @param id 
- * @param studyID 
- * @param items 
+ * @param id
+ * @param studyID
+ * @param items
  */
 export const ActivityScheduler = async (id?: string, studyID?: string, items?: any[]): Promise<void> => {
   console.log("Preparing to fetch activities")
@@ -368,7 +368,7 @@ export async function removeActivityJobs(activity_id: string): Promise<any> {
  */
 async function removeRepeatableJob(activity_id: string): Promise<void> {
   const repeatableJobs = await SchedulerQueue?.getRepeatableJobs()
-  const job = (await repeatableJobs?.filter((job) => job.key.includes(activity_id))) as any
+  const job = repeatableJobs?.filter((job) => job.key.includes(activity_id)) as any
   for (let index = 0; index < job.length; index++) {
     await SchedulerQueue?.removeRepeatableByKey(job[index].key)
   }
@@ -399,7 +399,7 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
     console.log("LocateTimezone--", error)
   }
   const timezone_ = !!timezone?.data ? timezone?.data : !!process.env.TIMEZONE ? process.env.TIMEZONE : null
-  Device.timezone = timezone_
+  Device.timezone = typeof (timezone_) === "object" && timezone_ === null ? "null" : timezone_
   let newTimeZones: any[] = []
   //get the schedulerIds for each activity_id, if present
   for (const activityID of activityIDs) {
@@ -407,27 +407,37 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
     if (null !== SchedulerReferenceJobs) {
       //take sheduler ids to find scheduler job
       for (const shedulerId of SchedulerReferenceJobs.data.scheduler_ref_ids) {
-        try {          
+        try {
           //get job details from Sheduler
           const SchedulerJob: any = (await SchedulerQueue?.getJob(shedulerId)) || null
           if (null !== SchedulerJob) {
             //get the participants for an scheduler id in an array
-            const participants: any = SchedulerJob?.data.participants            
-            newTimeZones.push({ timezone: participants[0].timezone, activity_id: SchedulerJob?.data.activity_id })
-            if (undefined !== participants) {
+            const participants: any = SchedulerJob?.data.participants
+            newTimeZones.push({
+              timezone:
+                typeof participants[0].timezone === "object" && participants[0].timezone === null
+                  ? "null"
+                  : participants[0].timezone,
+              activity_id: SchedulerJob?.data.activity_id,
+            })
+            if (undefined !== participants) {              
               const participantID = await participants.filter((participant: any) =>
                 participant.participant_id.includes(device_details.participant_id)
-              )              
-              if (undefined !== participantID) {                
-                if (participantID.length) {                  
+              )
+              if (undefined !== participantID) {
+                if (participantID.length) {
                   SheduleToUpdate.push({
                     index: participants.indexOf(participantID[0]),
                     shedulerId: shedulerId,
                     timezone: participants[0].timezone,
                     activity_id: activityID,
                   })
-                } else {                  
-                  if (Device.timezone === participants[0].timezone) {
+                } else {
+                  participants[0].timezone =
+                    typeof participants[0].timezone === "object" && participants[0].timezone === null
+                      ? "null"
+                      : participants[0].timezone
+                  if (Device.timezone === participants[0].timezone) {                    
                     SheduleToUpdate.push({
                       index: participants.indexOf(participantID[0]),
                       shedulerId: shedulerId,
@@ -449,21 +459,22 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
         await ActivityScheduler(activityID)
       }
     }
-  }  
+  }
+
   //update device details of a participant
   for (const updateDetail of SheduleToUpdate) {
     try {
       const SchedulerJob: any = (await SchedulerQueue?.getJob(updateDetail.shedulerId)) || null
       if (null != SchedulerJob) {
-        let newParticipants: any = await SchedulerJob?.data.participants        
+        let newParticipants: any = await SchedulerJob?.data.participants
         //remove the participant with old device details
         if (-1 !== updateDetail.index) {
           await newParticipants.splice(updateDetail.index, 1)
         }
         //mode =1-add sensor_event, mode=2-delete sensor_event, also check for timezone whether its same or not
-        if (device_details.mode === 1 && Device.timezone === updateDetail.timezone) {
+        if (device_details.mode === 1 && Device.timezone == updateDetail.timezone) {
           await newParticipants.unshift(Device)
-        }        
+        }
         //Prepare scheduler data
         const data = {
           title: SchedulerJob?.data.title,
@@ -475,15 +486,15 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
         }
 
         //update scheduler with new participant
-        if (newParticipants.length !== 0) {          
+        if (newParticipants.length !== 0) {
           await SchedulerJob?.update(data)
-        } else {          
+        } else {
           try {
             let repeatId = SchedulerJob?.opts?.repeat?.jobId
             if (!!repeatId) {
-              if (repeatId.includes("fortnightly")) {                
+              if (repeatId.includes("fortnightly")) {
                 await removeRepeatableJob(`${SchedulerJob?.data.activity_id}|fortnightly|${updateDetail.timezone}`)
-              } else {                
+              } else {
                 await removeRepeatableJob(`${SchedulerJob?.data.activity_id}|${updateDetail.timezone}`)
               }
             }
@@ -508,10 +519,11 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
       console.log(`"error updating device in job2-${error}"`)
     }
   }
+
   const TimeZone = newTimeZones.filter((zones: any) => zones.timezone.includes(Device.timezone))
   //If the timezone is new for the activity, create it as new schedule
   if (!!TimeZone && !TimeZone.length) {
-    for (const newTimeZone of newTimeZones) {      
+    for (const newTimeZone of newTimeZones) {
       if (!!newTimeZone.activity_id) {
         const release = await clientLock.acquire()
         try {
@@ -524,7 +536,7 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
         release()
       }
     }
-  }
+  }  
 }
 
 /**remove duplicate participants from participants array in a job queue
