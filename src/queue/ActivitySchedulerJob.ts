@@ -891,10 +891,10 @@ export function getCurrentTime(timezone?: string): string {
     let dtDate: string | number = Number(dat.split("/")[0])
     let dtMnth: string | number = Number(dat.split("/")[1])
     let dtYr = dat.split("/")[2]
-    if (dtMnth < 9) dtMnth = `0${dtMnth}`
-    if (dtDate < 9) dtDate = `0${dtDate}`
-    if (timHr < 9) timHr = `0${timHr}`
-    if (timMt < 9) timMt = `0${timMt}`
+    if (dtMnth < 10) dtMnth = `0${dtMnth}`
+    if (dtDate < 10) dtDate = `0${dtDate}`
+    if (timHr < 10) timHr = `0${timHr}`
+    if (timMt < 10) timMt = `0${timMt}`
     now = `${dtYr}-${dtMnth}-${dtDate}T${timHr}:${timMt}:${timSc}.${timMs}Z`
   }
   return now
