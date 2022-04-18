@@ -382,14 +382,13 @@ async function removeRepeatableJob(activity_id: string): Promise<void> {
 export async function updateDeviceDetails(activityIDs: any, device_details: any): Promise<void> {
   //form the device detail to be saved
   let Device: any =
-    device_details.device_token !== undefined
-      ? {
+        {
           participant_id: device_details.participant_id,
-          device_token: device_details.device_token,
-          device_type: device_details.device_type.toLowerCase(),
-          timezone: undefined,
+          device_token: !!device_details.device_token ? device_details.device_token : undefined,
+          device_type: !!device_details.device_type ? device_details.device_type.toLowerCase(): undefined,
+          timezone: undefined
         }
-      : undefined
+      
   //Initialise array to store scheduler details to be updated
   const SheduleToUpdate: any = []
   let timezone: any = {}
