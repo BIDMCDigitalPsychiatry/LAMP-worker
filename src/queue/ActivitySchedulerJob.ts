@@ -477,11 +477,13 @@ export async function updateDeviceDetails(activityIDs: any, device_details: any)
         //Prepare scheduler data
         const data = {
           title: SchedulerJob?.data.title,
+          start_date:SchedulerJob?.data.start_date,
           message: SchedulerJob?.data.message,
           activity_id: SchedulerJob?.data.activity_id,
           timezone: SchedulerJob?.data.timezone,
           participants: await removeDuplicateParticipants(newParticipants),
           notificationIds: SchedulerJob?.data.notificationIds ?? undefined,
+          repeat_interval: SchedulerJob?.data.repeat_interval
         }
 
         //update scheduler with new participant
