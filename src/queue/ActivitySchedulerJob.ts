@@ -75,10 +75,12 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
           if (event_data.length === 0) continue
           const filteredArray: any = await event_data.filter(
             (x: any) =>
-              x.data.type === undefined &&
-              (x.data.action === "login" || x.data.action === "logout") &&
-              x.data.device_type !== "Dashboard"
-          )
+              (x.data.type === undefined &&
+              (x.data.action === "login" || x.data.action === "logout")) || 
+              (x.data.action === undefined &&
+              (x.data.type === "login" || x.data.type === "logout"))
+               &&
+              x.data.device_type !== "Dashboard")
           if (filteredArray.length === 0) continue
           const events: any = filteredArray[0]
           const device = undefined !== events && undefined !== events.data ? events.data : undefined
@@ -639,7 +641,9 @@ export const UpdateSchedule = (topic: string, data: any) => {
       )
     }
     //update activity schedule in cache for login/logout of an participant
-    if ((sensor === "lamp.analytics" || sensor === "analytics") && data_.action === "logout") {
+    if ((sensor === "lamp.analytics" || sensor === "analytics") && 
+    ((!!data_.action && data_.action === "logout") || (!!data_.type && data_.type === "logout"))
+    ) {
       SchedulerDeviceUpdateQueue?.add(
         { device_type: undefined, device_token: undefined, participant_id: participant_id, mode: 2 },
         { attempts: 3, backoff: 10000, removeOnComplete: true, removeOnFail: true }
