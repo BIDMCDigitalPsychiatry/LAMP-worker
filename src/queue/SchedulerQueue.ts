@@ -48,7 +48,7 @@ export async function SchedulerQueueProcess(job: Bull.Job<any>, done: Bull.DoneC
         }
       }
     }
-  } catch (error) {}
+  } catch (error:any) {}
   done()
 }
 //listen to the competed event of Scheduler Queue
@@ -62,7 +62,7 @@ export async function SchedulerQueueOnCompleted(job: Bull.Job<any>): Promise<voi
     release()
     console.log(`Rescheduled job after notificcation process-  ${job.data.activity_id}`)
     console.log(`release lock  on success  ${job.data.activity_id}`)
-  } catch (error) {
+  } catch (error:any) {
     //release the lock for thread
     release()
     console.log(`release lock  on exception2  ${job.data.activity_id}`)
@@ -125,7 +125,7 @@ export function sendNotification(device_token: string, device_type: string, payl
             .catch((e) => {
               console.log("Error encountered sending GCM push notification.")
             })
-        } catch (error) {
+        } catch (error:any) {
           console.log(`"Error encountered sending GCM push notification"-${error}`)
         }
         break
@@ -170,7 +170,7 @@ export function sendNotification(device_token: string, device_type: string, payl
             .catch((e) => {
               console.log(`"Error encountered sending APN push notification."--${e}`)
             })
-        } catch (error) {
+        } catch (error:any) {
           console.log(`"Error encountered sending APN push notification"-${error}`)
         }
         break
@@ -214,14 +214,14 @@ export function sendNotification(device_token: string, device_type: string, payl
             .catch((e) => {
               console.log(`"Error encountered sending APN push notification."--${e}`)
             })
-        } catch (error) {
+        } catch (error:any) {
           console.log(`"Error encountered sending APN push notification"-${error}`)
         }
         break
       default:
         break
     }
-  } catch (error) {
+  } catch (error:any) {
     console.log(error.message)
   }
 }
