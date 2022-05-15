@@ -2,7 +2,7 @@ import _Docker from "dockerode"
 import tar from "tar-stream"
 import Stream from "stream"
 
-let Docker: _Docker
+let Docker: _Docker|any
 try {
   if (!!process.env.DOCKER_ADDR && !!process.env.DOCKER_ADDR?.split(":")[0] && !!process.env.DOCKER_ADDR?.split(":")[1])
     Docker = new _Docker({
@@ -10,7 +10,7 @@ try {
       port: `${process.env.DOCKER_ADDR?.split(":")[1]}`,
     })
   else Docker = new _Docker({ socketPath: "/var/run/docker.sock" })
-} catch (error) {
+} catch (error:any) {
   console.log("Error configuring docker", error)
 }
 const base_image = `node:16.8.0-alpine3.13`
@@ -33,7 +33,7 @@ export abstract class ScriptRunner {
       let exists=new Array
       try {
         exists = await Docker.listImages({ filters: { reference: [base_image] } })
-      } catch (error) {
+      } catch (error:any) {
         console.log("error communicating with docker daemon",error)
       }
        
@@ -124,7 +124,7 @@ export abstract class ScriptRunner {
       try {
         // Build a new image  unless one already exists.
         exists = await Docker.listImages({ filters: { reference: [base_image] } })
-      } catch (error) {
+      } catch (error:any) {
         console.log("error communicating with docker daemon",error)
       }
       
@@ -192,7 +192,7 @@ export abstract class ScriptRunner {
             )
           )
         console.log(`Script execution finished.`)
-      } catch (error) {
+      } catch (error:any) {
         console.error(error)
       } finally {
         await container.stop()

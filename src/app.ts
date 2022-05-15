@@ -104,7 +104,7 @@ async function main(): Promise<void> {
     //Starting the server
     _server.listen(process.env.PORT || 3000)
     console.log(`server listening in ${process.env.PORT}`)
-  } catch (error) {
+  } catch (error:any) {
     console.log("Encountered issue while starting LAMP-worker", error)
   }
 }
@@ -125,7 +125,7 @@ async function NatsConnect() {
       clearInterval(intervalId)
       console.log("Connected to nats sub server")
       SubscribeTopics()
-    } catch (error) {
+    } catch (error:any) {
       console.log("Error in Connecting to nats sub server")
     }
   }, 3000)
@@ -158,7 +158,7 @@ async function ServerConnect(): Promise<void> {
     const accessKey = process.env.LAMP_AUTH?.split(":")[0] as string
     const secretKey = process.env.LAMP_AUTH?.split(":")[1] as string
     await LAMP.connect({ accessKey: accessKey, secretKey: secretKey, serverAddress: server_url })
-  } catch (error) {
+  } catch (error:any) {
     console.log("Lamp server connect error", error)
     throw new error("Lamp server connection failed ")
   }
