@@ -599,7 +599,7 @@ export async function cleanAllQueues(): Promise<any> {
  * @param topic
  * @param data
  */
-export const UpdateSchedule = async(topic: string, data: any) => {
+export const UpdateSchedule = (topic: string, data: any) => {
   if (topic === "activity") {
     const data_ = JSON.parse(data) ?? undefined
     if (!!data_ && data_.action !== "delete") {
@@ -648,30 +648,6 @@ export const UpdateSchedule = async(topic: string, data: any) => {
         { device_type: undefined, device_token: undefined, participant_id: participant_id, mode: 2 },
         { attempts: 3, backoff: 10000, removeOnComplete: true, removeOnFail: true }
       )
-    }
-  } else if (topic === "participant") {
-    const data_ = JSON.parse(data) ?? undefined
-    if (!!data_ && data_.action === "delete") {
-      //find device details and
-      let activities: any[] = []
-      console.log("DATA  on delete",data_)
-      console.log("study id on delete",data_.study_id)
-      try {
-        activities = await LAMP.Activity.allByStudy(data_.study_id as string, undefined, true)
-      } catch (error) {
-        console.log("error while fetching activities---", error)
-      }
-      if (activities.length) {
-        for (let activity of activities) {
-          try {
-            //set scheduler for each activity which contain valid schedules
-            if (activity.schedule === undefined || activity?.schedule?.length === 0) continue
-            await ActivityScheduler(activity.id, data_.study_id, [activity] as any)
-          } catch (error) {
-            console.log("error on scheduling after deleting participant", error)
-          }
-        }
-      }
     }
   }
 }
