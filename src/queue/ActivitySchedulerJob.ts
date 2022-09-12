@@ -616,7 +616,7 @@ export const UpdateSchedule = (topic: string, data: any) => {
     } else {
       //delete activity schedule in cache for delete of an activity
       DeleteFromSchedulerQueue?.add(
-        { activity_id: data.activity_id },
+        { activity_id: data_.activity_id },
         {
           removeOnComplete: true,
           removeOnFail: true,
