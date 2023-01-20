@@ -152,6 +152,10 @@ export function sendNotification(device_token: string, device_type: string, payl
               expiry: 21600000,
               page: `${url}`,
               actions: [{ name: "Open App", page: `${url}` }],
+              "loc-key": "You have a mindLAMP activity waiting for you: %@.",
+              "loc-args": [
+               payload.title
+              ]
             },
           }
 
@@ -197,6 +201,10 @@ export function sendNotification(device_token: string, device_type: string, payl
               expiry: 21600000,
               page: `${url}`,
               actions: [{ name: "Open App", page: `${url}` }],
+              "loc-key": "You have a mindLAMP activity waiting for you: %@.",
+              "loc-args": [
+               payload.title
+              ]
             },
           }
           //connect to api gateway and send notifications
