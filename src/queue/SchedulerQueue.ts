@@ -147,6 +147,11 @@ export function sendNotification(device_token: string, device_type: string, payl
                 "push-type": "alert",
                 "collapse-id": `${notificationId}`,
                 expiration: 10,
+               "loc-key": "You have a mindLAMP activity waiting for you: %@.",
+               "loc-args": [
+                   "Pop the balloon"
+               ]
+              
               },
               notificationId: `${notificationId}`,
               expiry: 21600000,
@@ -191,7 +196,11 @@ export function sendNotification(device_token: string, device_type: string, payl
                 "content-available": 1,
                 "push-type": "background",
                 "collapse-id": `${notificationId}`,
-                expiration: 10,
+                expiration: 10,                
+               "loc-key": "You have a mindLAMP activity waiting for you: %@.",
+               "loc-args": [
+                   "Pop the balloon"
+               ]
               },
               notificationId: `${notificationId}`,
               expiry: 21600000,
