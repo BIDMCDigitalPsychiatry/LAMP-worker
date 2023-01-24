@@ -149,7 +149,7 @@ export function sendNotification(device_token: string, device_type: string, payl
                 expiration: 10,
                "loc-key": "You have a mindLAMP activity waiting for you: %@.",
                "loc-args": [
-                   "Pop the balloon"
+                `${payload.title}.`
                ]
               
               },
@@ -199,7 +199,7 @@ export function sendNotification(device_token: string, device_type: string, payl
                 expiration: 10,                
                "loc-key": "You have a mindLAMP activity waiting for you: %@.",
                "loc-args": [
-                   "Pop the balloon"
+                `${payload.title}.`
                ]
               },
               notificationId: `${notificationId}`,
