@@ -154,6 +154,7 @@ export function sendNotification(device_token: string, device_type: string, payl
                 expiration: 10
               },
               notificationId: `${notificationId}`,
+              title: `${payload.title}.`,
               expiry: 21600000,
               page: `${url}`,
               actions: [{ name: "Open App", page: `${url}` }],
@@ -204,6 +205,7 @@ export function sendNotification(device_token: string, device_type: string, payl
                 expiration: 10
               },
               notificationId: `${notificationId}`,
+              title: `${payload.title}.`,
               expiry: 21600000,
               page: `${url}`,
               actions: [{ name: "Open App", page: `${url}` }],
