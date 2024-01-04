@@ -139,16 +139,22 @@ export function sendNotification(device_token: string, device_type: string, payl
             device_token: device_token,
             payload: {
               aps: {
-                alert: `${payload.message}.`,
+                alert: {
+                  "loc-key": "You have a mindLAMP activity waiting for you: %@.",
+                  "loc-args": [
+                   `${payload.title}.`
+                   ]
+                },
                 badge: 0,
                 sound: "default",
                 "mutable-content": 1,
                 "content-available": 1,
                 "push-type": "alert",
                 "collapse-id": `${notificationId}`,
-                expiration: 10,
+                expiration: 10
               },
               notificationId: `${notificationId}`,
+              title: `${payload.title}.`,
               expiry: 21600000,
               page: `${url}`,
               actions: [{ name: "Open App", page: `${url}` }],
@@ -188,17 +194,23 @@ export function sendNotification(device_token: string, device_type: string, payl
             device_token: device_token,
             payload: {
               aps: {
-                alert: `${payload.message}.`,
+                alert: {
+                  "loc-key": "You have a mindLAMP activity waiting for you: %@.",
+                  "loc-args": [
+                   `${payload.title}.`
+                   ]
+                },
                 badge: 0,
                 sound: "default",
                 "mutable-content": 1,
                 "content-available": 1,
                 "push-type": "background",
                 "collapse-id": `${notificationId}`,
-                expiration: 10,
+                expiration: 10
               },
               notificationId: `${notificationId}`,
-              expiry: 21600000, 
+              title: `${payload.title}.`,
+              expiry: 21600000,
               page: `${url}`,
               actions: [{ name: "Open App", page: `${url}` }],
               "loc-key": "You have a mindLAMP activity waiting for you: %@.",
