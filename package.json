@@ -16,7 +16,7 @@
     "dockerode": "^3.3.1",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
-    "ioredis": "^4.28.2",
+    "ioredis": "^5.3.2",
     "lamp-core": "^2021.7.27",
     "node-fetch": "^2.6.7",
     "source-map-support": "^0.5.19",
