@@ -7,7 +7,7 @@ import { StoreAutomations, TriggerAutomations } from "./queue/Automation"
 import { initializeQueues } from "./queue/Queue"
 import LAMP from "lamp-core"
 import ioredis from "ioredis"
-let RedisClient: ioredis.Redis
+let RedisClient: ioredis
 let nc: Client
 
 const app: Application = express()
@@ -43,13 +43,13 @@ export let triggers = {
  * Creating singleton class for redis
 */
 export class RedisFactory {
-  private static instance: ioredis.Redis
+  private static instance: ioredis
   private constructor() {}
   
   /**
    * @returns redis client instance
   */
-  public static getInstance(): ioredis.Redis {
+  public static getInstance(): ioredis {
     if (this.instance === undefined) {      
       this.instance = new ioredis(
                 parseInt(`${(process.env.REDIS_HOST as any).match(/([0-9]+)/g)?.[0]}`),
@@ -64,7 +64,7 @@ export class RedisFactory {
     return this.instance
   }
 }
-
+console.log(`########################################################################`, RedisFactory.getInstance())
 /**Initialize and configure the application.
  *
  */
