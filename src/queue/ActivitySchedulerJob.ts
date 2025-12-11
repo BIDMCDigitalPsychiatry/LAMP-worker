@@ -128,7 +128,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
               const scheduler_payload: any = {
                 title: activity.name,
                 start_date: start_date,
-                message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
+                message: schedule?.notificationMessage ?? `You have a mindLAMP activity waiting for you: ${activity.name}.`,
                 activity_id: activity.id,
                 participants: await removeDuplicateParticipants(Participants),
                 notificationIds: notification_id,
@@ -145,6 +145,7 @@ export const ActivityScheduler = async (id?: string, studyID?: string, items?: a
                 cronStr: cronStr,
                 notificationIds: notification_id,
                 start_date: start_date,
+                message: schedule?.notificationMessage ?? `You have a mindLAMP activity waiting for you: ${activity.name}.`,
               }
               await setCustomSchedule(activity_details, Participants)
             }
@@ -739,7 +740,7 @@ async function setCustomSchedule(activity: any, Participants: string[]): Promise
         const scheduler_payload: any = {
           title: activity.name,
           start_date: activity.start_date ?? undefined,
-          message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
+          message: activity?.message ?? `You have a mindLAMP activity waiting for you: ${activity.name}.`,
           activity_id: activity.activity_id,
           participants: await removeDuplicateParticipants(Participants),
           notificationIds: notification_id,
@@ -927,7 +928,7 @@ async function RescheduleForParticipant(activity_id: string, Device: any) {
           const scheduler_payload: any = {
             title: activity.name,
             start_date: start_date,
-            message: `You have a mindLAMP activity waiting for you: ${activity.name}.`,
+            message: schedule?.notificationMessage ?? `You have a mindLAMP activity waiting for you: ${activity.name}.`,
             activity_id: activity.id,
             participants: Participants,
             notificationIds: notification_id,
@@ -944,6 +945,7 @@ async function RescheduleForParticipant(activity_id: string, Device: any) {
             cronStr: cronStr,
             notificationIds: notification_id,
             start_date: start_date,
+            message: schedule?.notificationMessage ?? `You have a mindLAMP activity waiting for you: ${activity.name}.`,
           }
           await setCustomSchedule(activity_details, Participants)
         }
